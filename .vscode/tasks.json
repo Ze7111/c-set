@@ -1,0 +1,400 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        // task to create the folder build if it doesnt exist
+        {
+            "label": "create-build-folder",
+            "presentation": { // dont show the task output unless there is an error
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "close": true,
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "type": "shell",
+            "command": "mkdir",
+            "args": [
+                "-p",
+                "${workspaceFolder}/build"
+            ],
+            // windows
+            "windows": {
+                "command": "cmd",
+                "args": [
+                    "/c",
+                    "if not exist \"${workspaceFolder}\\build\" mkdir \"${workspaceFolder}\\build\""
+                ]
+            },
+            // mac
+            "osx": {
+                "command": "sh",
+                "args": [
+                    "-c",
+                    "mkdir -p ${workspaceFolder}/build"
+                ]
+            },
+            // linux
+            "linux": {
+                "command": "sh",
+                "args": [
+                    "-c",
+                    "mkdir -p ${workspaceFolder}/build"
+                ]
+            },
+        },
+        {
+            "label": "create-debug-folder",
+            "presentation": { // dont show the task output unless there is an error
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "close": true,
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "type": "shell",
+            "command": "mkdir",
+            "args": [
+                "-p",
+                "${workspaceFolder}/build/debug"
+            ],
+            // windows
+            "windows": {
+                "command": "cmd",
+                "args": [
+                    "/c",
+                    "if not exist \"${workspaceFolder}\\build\\debug\" mkdir \"${workspaceFolder}\\build\\debug\""
+                ]
+            },
+            // mac
+            "osx": {
+                "command": "sh",
+                "args": [
+                    "-c",
+                    "mkdir -p ${workspaceFolder}/build/debug"
+                ]
+            },
+            // linux
+            "linux": {
+                "command": "sh",
+                "args": [
+                    "-c",
+                    "mkdir -p ${workspaceFolder}/build/debug"
+                ]
+            },
+        },
+        {
+            "label": "create-release-folder",
+            "presentation": { // dont show the task output unless there is an error
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "close": true,
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "type": "shell",
+            "command": "mkdir",
+            "args": [
+                "-p",
+                "${workspaceFolder}/build/release"
+            ],
+            // windows
+            "windows": {
+                "command": "cmd",
+                "args": [
+                    "/c",
+                    "if not exist \"${workspaceFolder}\\build\\release\" mkdir \"${workspaceFolder}\\build\\release\""
+                ]
+            },
+            // mac
+            "osx": {
+                "command": "sh",
+                "args": [
+                    "-c",
+                    "mkdir -p ${workspaceFolder}/build/release"
+                ]
+            },
+            // linux
+            "linux": {
+                "command": "sh",
+                "args": [
+                    "-c",
+                    "mkdir -p ${workspaceFolder}/build/release"
+                ]
+            },
+        },
+        
+        
+        // ---------------------------------------- //
+        
+        
+        {
+            "label": "release-build-g++",
+            "presentation": { // dont show the task output unless there is an error
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "close": false,
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "type": "shell",
+            "dependsOn": ["create-build-folder", "create-release-folder"],
+            "command": "g++",
+            "args": [
+                "${file}",
+                "-O3",
+                "-std=c++2b",
+                "-o",
+                "${workspaceFolder}/build/release/${fileBasenameNoExtension}.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+        },
+        {
+            "label": "release-build-gcc",
+            "presentation": { // dont show the task output unless there is an error
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "close": true,
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "type": "shell",
+            "dependsOn": ["create-build-folder", "create-release-folder"],
+            "command": "gcc",
+            "args": [
+                "${file}",
+                "-O3",
+                "-std=c2b",
+                "-o",
+                "${workspaceFolder}/build/release/${fileBasenameNoExtension}.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "release-build-msvc",
+            "presentation": { // dont show the task output unless there is an error
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "close": true,
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "type": "shell",
+            "dependsOn": ["create-build-folder", "create-release-folder"],
+            "command": "cl.exe",
+            "args": [
+                "/std:c++latest", // C++ standard
+                "/O2", // Optimize for speed
+                "/GL", // Whole program optimization
+                "/EHsc", // Enable exception handling
+                "/Fe:", // Output file
+                "${workspaceFolder}/build/release/${fileBasenameNoExtension}.exe",
+                "${file}"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "release-build-clang",
+            "presentation": { // dont show the task output unless there is an error
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "close": true,
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "type": "shell",
+            "dependsOn": ["create-build-folder", "create-release-folder"],
+            "command": "clang",
+            "args": [
+                "${file}",
+                "-std=c2b",
+                "-O3",
+                "-o",
+                "${workspaceFolder}/build/release/${fileBasenameNoExtension}.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "release-build-clang++",
+            "presentation": { // dont show the task output unless there is an error
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "close": true,
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "type": "shell",
+            "dependsOn": ["create-build-folder", "create-release-folder"],
+            "command": "clang++",
+            "args": [
+                "${file}",
+                "-std=c++2b",
+                "-O3",
+                "-o",
+                "${workspaceFolder}/build/release/${fileBasenameNoExtension}.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+
+
+
+
+
+
+        {
+            "label": "debug-build-g++",
+            "presentation": { // dont show the task output unless there is an error
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "close": false,
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "type": "shell",
+            "dependsOn": ["create-build-folder", "create-debug-folder"],
+            "command": "g++",
+            "args": [
+                "${file}",
+                "-g",
+                "-O0",
+                "-std=c++2b",
+                "-o",
+                "${workspaceFolder}/build/debug/${fileBasenameNoExtension}.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+        },
+        {
+            "label": "debug-build-gcc",
+            "presentation": { // dont show the task output unless there is an error
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "close": true,
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "type": "shell",
+            "dependsOn": ["create-build-folder", "create-debug-folder"],
+            "command": "gcc",
+            "args": [
+                "${file}",
+                "-g",
+                "-O0",
+                "-std=c2b",
+                "-o",
+                "${workspaceFolder}/build/debug/${fileBasenameNoExtension}.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "debug-build-msvc",
+            "presentation": { // dont show the task output unless there is an error
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "close": true,
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "type": "shell",
+            "dependsOn": ["create-build-folder", "create-debug-folder"],
+            "command": "cl.exe",
+            "args": [
+                "/std:c++latest", // C++ standard
+                "/Od",
+                "/Zi", // Generate debug information
+                "/EHsc", // Enable exception handling
+                "/Fo:${workspaceFolder}/build/debug/${fileBasenameNoExtension}.obj",
+                "/Fd:${workspaceFolder}/build/debug/${fileBasenameNoExtension}.pdb",
+                "/Fe:", // Output file
+                "${workspaceFolder}/build/debug/${fileBasenameNoExtension}.exe",
+                "${file}"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "debug-build-clang",
+            "presentation": { // dont show the task output unless there is an error
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "close": true,
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "type": "shell",
+            "dependsOn": ["create-build-folder", "create-debug-folder"],
+            "command": "clang",
+            "args": [
+                "${file}",
+                "-std=c2b",
+                "-O0",
+                "-o",
+                "${workspaceFolder}/build/debug/${fileBasenameNoExtension}.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "debug-build-clang++",
+            "presentation": { // dont show the task output unless there is an error
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "close": true,
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "type": "shell",
+            "dependsOn": ["create-build-folder", "create-debug-folder"],
+            "command": "clang++",
+            "args": [
+                "${file}",
+                "-std=c++2b",
+                "-O0",
+                "-o",
+                "${workspaceFolder}/build/debug/${fileBasenameNoExtension}.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+    ]
+}

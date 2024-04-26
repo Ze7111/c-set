@@ -1,0 +1,123 @@
+C-Set
+=====
+
+C-Set is a simple CLI tool designed to streamline your development setup by
+    copying necessary files into a directory. It's especially useful for setting
+    up environments such as a Visual Studio Code C++ project.
+
+Features
+--------
+*   **Profile Selection:** Optionally specify a profile
+    (by an integer identifier) to select a predefined set of files and
+    configurations for your project.
+*   **Configuration Override:** Use the `--conf` flag to override default
+    configurations or specify additional settings.
+*   **Versatility:** Easily extendable to support various development
+    environments and configurations.
+
+Usage
+-----
+To use C-Set, run the following command in your terminal:
+
+arduino
+
+Copy code
+
+`c-set [profile-name] [options]`
+
+### Options
+
+- `profile-name`: (Optional) An string that specifies the profile to be used
+    for setting up the project. Each profile corresponds to a different set of
+    files and configurations and can be created by using the `--conf` flag.
+- `--conf`:       (Optional) Opens the Interactive Configuration Mode to
+    create or modify a profile or the configuration.
+- `--help`:       Displays help information about the commands.
+- `--verbose`:    Enables detailed output of the operation process.
+- `--force`:      Forces the action, allowing overwrites in the target directory.
+- `--version`:    Displays the current version of C-Set.
+
+Installation and Building
+------------
+1.  Clone the repository:
+```bash
+git clone https://github.com/ze7111/c-set.git
+```
+    
+2.  Navigate to the C-Set directory:
+```bash
+cd c-set
+```
+
+### Building from Source
+> **_NOTE:_**  There are no build requirements or build tools used for C-Set.
+> This is pure C++ code that can be compiled with any C++23 (or C++2b) compliant compiler.
+
+#### Using MSVC (Visual Studio C++)
+> **_NOTE:_**  For MSVC, there is no Visual Studio solution file provided.
+> If you want to use Visual Studio, you can create a new project and add the
+> source files to it. Alternatively, you can use the command line with `cl.exe`.
+
+1. Open Visual Studio.
+2. Create a new **Empty Project**:
+    - Go to File > New > Project.
+    - Select Visual C++ > General > Empty Project.
+    - Enter a name for the project and click OK.
+3. Add the source files to the project:
+    - Right-click on the Source Files folder in the Solution Explorer.
+    - Select Add > Existing Item.
+    - Navigate to the C-Set directory and select the source files.
+    - Click Add.
+4. Set the C++ standard to C++23 (or C++2b):
+    - Right-click on the project in the Solution Explorer.
+    - Select Properties.
+    - Go to C/C++ > Language.
+    - Set the C++ Language Standard to ISO C++23 (or C++2b).
+    - Click OK.
+5. Build the project:
+    - Right-click on the project in the Solution Explorer.
+    - Select Build.
+    - Alternatively, you can use the command line with `cl.exe`.
+    - For example:
+    ```bash
+    cl /EHsc /O2 /std:c++2b /Fe:c-set.exe main.cpp
+    ```
+    - This command compiles the `main.cpp` file with the C++23 (or C++2b) standard and
+        generates an executable named `c-set.exe`.
+
+#### Using GCC
+To build the project on Windows, use the following command:
+```bash
+g++ -O3 -std=c++2b -o c-set.exe main.cpp
+```
+
+#### Using Clang
+To build the project on Windows, use the following command:
+```bash
+clang++ -O3 -std=c++2b -o c-set.exe main.cpp
+```
+
+### Installation
+After building the project, run `c-set` from the command line and follow the
+    instructions to set up your project.
+
+Examples
+--------
+To set up a basic C++ project in Visual Studio Code with the profile `c++`:
+```bash
+
+
+
+To customize the configuration of the project setup:
+
+
+
+Contributing
+------------
+Contributions are welcome! Please fork the repository and submit a pull request
+    with your changes.
+
+License
+-------
+The project is licensed under the Apache License 2.0. See the
+    [LICENSE](LICENSE) file for more information.
