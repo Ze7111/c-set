@@ -48,6 +48,7 @@ class Config : public ConfigDataSource {
     auto close() -> void;
 
     auto operator[](const std::string &key) -> std::string &;
+    auto operator[](std::string key) -> std::string;
     auto get(const std::string &key) -> std::string override;
     auto set(const std::string &key, const std::string &value) -> void;
     auto remove(const std::string &key) -> void;

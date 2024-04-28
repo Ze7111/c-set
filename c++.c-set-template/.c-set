@@ -1,0 +1,3 @@
+[setup]
+pre = ["include/setup.py"] # excute setup.py before install
+# no need to specify the ignore folder as it is automatically ignored
