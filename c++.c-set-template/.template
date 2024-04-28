@@ -7,6 +7,7 @@ $(INCLUDES)     = "
     -I${workspaceFolder}/src,
     -I${workspaceFolder}/lib
 "
-$(NUMBER)       = 1,28,382
+$(NUMBER)       = 1,28a,382
 
+@win32 $(NUMBER) = "Hello, $(NAME)! you are using windows"
 # commet somehitng

@@ -92,7 +92,7 @@
     case '8':       \
     case '9'
 
-#define digit _0_9: case '-'
+#define digit _0_9 : case '-'
 
 #define punctuation(next, tokens)             \
     '!' : tokens.push_back({OPTIONAL, "!"});  \
@@ -125,8 +125,16 @@
 
 #define literal     \
     A_Z : case a_z: \
-    case _0_9:     \
+    case _0_9:      \
     case '_'
+
+#define whitespace   \
+    ' ' : case '\t': \
+    case '\v':       \
+    case '\f':       \
+    case '\r':       \
+    case '\n':       \
+    case '\0'
 
 namespace lexer {
 enum token_type {
@@ -349,7 +357,7 @@ TemplateError MissingVariableDeclarationError =
                   "declare the variable '%s' before its use.");
 
 TemplateError InvalidSyntaxError =
-    TemplateError("syntax error near '%s'.", "check the syntax near '%s'.");
+    TemplateError("syntax error near '%s'.", "check the syntax '%s'.");
 
 TemplateError UnknownDirectiveError =
     TemplateError("unknown directive '%s' encountered.",
@@ -390,17 +398,18 @@ inline auto parse(std::stringstream &f_data,
     bool in_func = false;   // @function
     bool in_digit = false;  // 0..9(L)(U)(_)
 
+    char chr = '\0';
+
     // ======------- for each line -------====== //
     for (u64 line_num = 0; std::getline(f_data, line); line_num++) {
-        if (line.empty()) {
-            continue;
-        }
+        if (line.empty()) { continue; }
+        // ======------- reset -------====== //
         line += '\n';
         tail = 0;
         head = 0;
         // ======------- for each char -------====== //
         for (u64 chr_index = 0; chr_index < line.size(); chr_index++) {
-            char chr = line[chr_index];
+            chr = line[chr_index];
 
             if (in_string) {
                 switch (chr) {
@@ -474,16 +483,36 @@ inline auto parse(std::stringstream &f_data,
                     ++head;
                     continue;
                 case ')':
-                    ++head;
-                    tokens.push_back({VARTYPE, line.substr(tail, ++head)});
+                    ++ ++head;
+                    if (line[tail] == ' ') {
+                        tokens.push_back({VARTYPE, line.substr(tail + 1, head)});
+                    } else {
+                        tokens.push_back({VARTYPE, line.substr(tail, head)});
+                    }
                     tail += head;
                     in_var = false;
                     break;
                 default:
-                    tokens.push_back({VARTYPE, line.substr(tail - 1, head)});
-                    tail += head - 1;
-                    in_var = false;
+                    // invalid line expected ) var
+                    InvalidSyntaxError.error(line.substr(tail, head)).fix("excepted $(...)").show(
+                        file_path, line, line_num, chr_index);
+                }
+            }
+
+            if (in_func) {
+                switch (chr) {
+                case literal:
+                    ++head;
+                    continue;
+                case whitespace:
+                    tokens.push_back({INBUILT, line.substr(tail, head+1)});
+                    tail += head;
+                    in_func = false;
                     break;
+                default:
+                    InbuiltFunctionError.error(std::string(1, chr))
+                        .fix(std::string(1, chr))
+                        .show(file_path, line, line_num, chr_index);
                 }
             }
 
@@ -503,9 +532,11 @@ inline auto parse(std::stringstream &f_data,
                     continue;
                 }
                 // invalid line expected $ var
-                InvalidSyntaxError.error("$")
-                    .fix("$")
-                    .show(file_path, line, line_num, chr_index);
+                InvalidSyntaxError.error("$").fix("$").show(
+                    file_path, line, line_num, chr_index);
+            case '@':
+                in_func = true;
+                continue;
             case literal:
                 switch (chr) {
                 case digit:
@@ -564,13 +595,13 @@ inline auto lex(std::string &file) -> std::vector<token> {
     f_data << file_stream.rdbuf();
     file_stream.close();
 
-    TIME_IT(parse(f_data, file));
+    //TIME_IT(parse(f_data, file));
     std::vector<token> parsed = parse(f_data, file);
     for (const token &tok : parsed) {
         std_v2::print(lexer::token_to_string(tok));
     }
 
-    std_v2::print(duration.count());
+    //std_v2::print(duration.count());
 
     return parsed;
 }
