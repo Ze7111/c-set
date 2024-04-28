@@ -1,3 +1,3 @@
 [submodule "pkgs/tomlplusplus"]
-	path = pkgs/tomlplusplus
+	path = libs/tomlplusplus
 	url = https://github.com/marzer/tomlplusplus.git
