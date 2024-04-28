@@ -3,6 +3,9 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <utility>
+#include <locale>
+#include <codecvt>
 
 #include "../pkgs/base/include.hh"
 #include "lexer.hh"
@@ -40,6 +43,8 @@ auto Template::get(const std::string &key) -> std::string {
 }
 
 int main() {  // testing
+    std::locale::global(std::locale("en_US.UTF-8"));
     std::string file = "../c++.c-set-template/.template";
     Template config(file);
 }
+

@@ -2,7 +2,10 @@
 #define __LEXER_H__
 
 #include <algorithm>
+#include <any>
+#include <chrono>
 #include <cstddef>
+#include <format>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -10,7 +13,6 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
-#include <chrono>
 #include <vector>
 
 #include "../pkgs/base/include.hh"
@@ -88,10 +90,9 @@
     case '6':       \
     case '7':       \
     case '8':       \
-    case '9':       \
-    case ','
+    case '9'
 
-#define digit _0_9
+#define digit _0_9: case '-'
 
 #define punctuation(next, tokens)             \
     '!' : tokens.push_back({OPTIONAL, "!"});  \
@@ -118,11 +119,13 @@
             ++ ++tail;                        \
             continue;                         \
         }                                     \
-        std_v2::print("invalid token start -");
+        UnexpectedCharacterError.error(std::string(1, '-')) \
+            .fix(std::string(1, '-')) \
+            .show(file_path, line, line_num, chr_index);
 
 #define literal     \
     A_Z : case a_z: \
-    case digit:     \
+    case _0_9:     \
     case '_'
 
 namespace lexer {
@@ -252,19 +255,125 @@ inline auto token_to_string(const token &tok) -> std::string {
            '"' + std::string(colors::reset) + ")";
 }
 
-#define TIME_IT(obj)  \
-    auto start = std::chrono::high_resolution_clock::now(); \
-    obj; \
-    auto stop = std::chrono::high_resolution_clock::now(); \
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start); \
-    std_v2::print("line: ", __LINE__, " took ", std::string(colors::fg16::red), duration, std::string(colors::reset))
+#define TIME_IT(obj)                                                         \
+    auto start = std::chrono::high_resolution_clock::now();                  \
+    obj;                                                                     \
+    auto stop = std::chrono::high_resolution_clock::now();                   \
+    auto duration =                                                          \
+        std::chrono::duration_cast<std::chrono::microseconds>(stop - start); \
+    std_v2::print("line: ", __LINE__, " took ",                              \
+                  std::string(colors::fg16::red), duration,                  \
+                  std::string(colors::reset))
 
+/*
+error: unknown delimeter ';'
+     ╰─> c++.c-set-template/.template:10:28
+$(NUMBER)       = 1,282,382;
+                           ^
+fix: remove ';' from the line
+*/
+template <typename T>  // if std::string(T) is possible
+concept stringable = requires(T obj) { std::string(obj); };
 
+struct TemplateError {
+    std::string error_message;
+    std::string fix_message;
+    std::vector<std::any> error_fmt_args;
+    std::vector<std::any> fix_fmt_args;
 
+    // Constructor to initialize the struct
+    TemplateError(std::string errorMsg, std::string fixMsg)
+        : error_message(std::move(errorMsg))
+        , fix_message(std::move(fixMsg)) {}
 
+    void show(const std::string &file_name, const std::string &line_str,
+              u64 line, u64 col, int offset = 1) {
+        // loop over all the %s and replace them with the arguments
+        size_t index = 0;
+        for (const auto &arg : error_fmt_args) {
+            auto pos = error_message.find("%s", index);
+            error_message.replace(pos, 2, std::any_cast<std::string>(arg));
+            index = pos + 2;
+        }
 
+        index = 0;
 
-inline auto parse(std::stringstream &f_data) -> std::vector<token> {
+        for (const auto &arg : fix_fmt_args) {
+            auto pos = fix_message.find("%s", index);
+            fix_message.replace(pos, 2, std::any_cast<std::string>(arg));
+            index = pos + 2;
+        }
+
+        std::cout << std::string(colors::fg16::red) << "error"
+                  << std::string(colors::fg16::cyan) << ": "
+                  << std::string(colors::reset) << error_message << '\n';
+        std::cout << "     " << std::string(colors::fg16::cyan) << "├─> "
+                  << std::string(colors::reset) << "at "
+                  << std::string(colors::fg16::green) << file_name
+                  << std::string(colors::reset) << ":"
+                  << std::string(colors::fg16::yellow) << line
+                  << std::string(colors::reset) << ":"
+                  << std::string(colors::fg16::yellow) << col
+                  << std::string(colors::reset) << '\n';
+        std::cout << "     " << std::string(colors::fg16::cyan) << ": "
+                  << std::string(colors::reset) << line_str;
+        std::cout << "     " << std::string(colors::fg16::cyan) << "│ "
+                  << std::string(colors::reset) << std::string(col, ' ')
+                  << std::string(colors::fg16::yellow)
+                  << std::string(offset, '^') << std::string(colors::reset)
+                  << '\n';
+        std::cout << "  " << std::string(colors::fg16::green) << "fix"
+                  << std::string(colors::fg16::cyan) << ": "
+                  << std::string(colors::reset) << fix_message << '\n';
+    };
+
+    template <typename... Args>
+        requires(stringable<Args> && ...)
+    TemplateError &error(Args &&...args) {
+        error_fmt_args = {std::forward<Args>(args)...};
+        return *this;
+    }
+
+    template <typename... Args>
+        requires(stringable<Args> && ...)
+    TemplateError &fix(Args &&...args) {
+        fix_fmt_args = {std::forward<Args>(args)...};
+        return *this;
+    }
+
+    ~TemplateError() = default;
+};
+
+TemplateError MissingVariableDeclarationError =
+    TemplateError("missing variable declaration for '%s'.",
+                  "declare the variable '%s' before its use.");
+
+TemplateError InvalidSyntaxError =
+    TemplateError("syntax error near '%s'.", "check the syntax near '%s'.");
+
+TemplateError UnknownDirectiveError =
+    TemplateError("unknown directive '%s' encountered.",
+                  "remove the unknown directive '%s' or check for typos.");
+
+TemplateError DirectiveMisuseError = TemplateError(
+    "misuse of directive '%s'.", "ensure that the directive '%s' is used "
+                                 "correctly according to documentation.");
+
+TemplateError UnexpectedCharacterError = TemplateError(
+    "unexpected character '%s' found.",
+    "remove the unexpected character '%s' or replace it as necessary.");
+
+TemplateError InbuiltFunctionError = TemplateError(
+    "error in using inbuilt function '%s'.",
+    "check the usage and parameters of the inbuilt function '%s'.");
+
+TemplateError VariableSanitizationFailure =
+    TemplateError("variable '%s' failed sanitization.",
+                  "ensure the variable '%s' adheres to allowed characters and "
+                  "formatting rules.");
+
+inline auto parse(std::stringstream &f_data,
+                  const std::string &file_path) -> std::vector<token> {
     std::stringstream partial;
     std::vector<token> tokens = {};
     std::string line;
@@ -278,8 +387,8 @@ inline auto parse(std::stringstream &f_data) -> std::vector<token> {
     bool in_literal = false;         // a..z(A..Z)(0..9)(_)
     bool in_multi_line_str = false;  // "\n\n\n" multiple lines not "\\n"
 
-    bool in_func = false;            // @function
-    bool in_digit = false;           // 0..9(L)(U)(_)
+    bool in_func = false;   // @function
+    bool in_digit = false;  // 0..9(L)(U)(_)
 
     // ======------- for each line -------====== //
     for (u64 line_num = 0; std::getline(f_data, line); line_num++) {
@@ -318,7 +427,6 @@ inline auto parse(std::stringstream &f_data) -> std::vector<token> {
                 case '\n':
                     partial.write(line.data() + tail, ++head);
                     in_multi_line_str = true;
-                    std_v2::print("in multi line string");
                     continue;
                 default:
                     ++head;
@@ -334,8 +442,10 @@ inline auto parse(std::stringstream &f_data) -> std::vector<token> {
                         ++head;
                         continue;
                     default:
-                        std_v2::print(
-                            "got a unknown here excepted only numbers.");
+                        // error not a digit
+                        UnexpectedCharacterError.error(std::string(1, chr))
+                            .fix(std::string(1, chr))
+                            .show(file_path, line, line_num, chr_index);
                     }
                 default:
                     tokens.push_back({NUMBER, line.substr(tail, ++head)});
@@ -361,7 +471,6 @@ inline auto parse(std::stringstream &f_data) -> std::vector<token> {
             if (in_var) {
                 switch (chr) {
                 case literal:
-                case '-':
                     ++head;
                     continue;
                 case ')':
@@ -393,7 +502,10 @@ inline auto parse(std::stringstream &f_data) -> std::vector<token> {
                     ++chr_index;
                     continue;
                 }
-                log(line, "invalid line expected $ var");
+                // invalid line expected $ var
+                InvalidSyntaxError.error("$")
+                    .fix("$")
+                    .show(file_path, line, line_num, chr_index);
             case literal:
                 switch (chr) {
                 case digit:
@@ -452,8 +564,8 @@ inline auto lex(std::string &file) -> std::vector<token> {
     f_data << file_stream.rdbuf();
     file_stream.close();
 
-    TIME_IT(parse(f_data));
-    std::vector<token> parsed = parse(f_data);
+    TIME_IT(parse(f_data, file));
+    std::vector<token> parsed = parse(f_data, file);
     for (const token &tok : parsed) {
         std_v2::print(lexer::token_to_string(tok));
     }
