@@ -7,7 +7,7 @@
 #include <locale>
 #include <codecvt>
 
-#include "../pkgs/base/include.hh"
+#include "../../pkgs/base/include.hh"
 #include "lexer.hh"
 
 
@@ -41,10 +41,3 @@ auto Template::close() -> void {
 auto Template::get(const std::string &key) -> std::string {
     return "nun";
 }
-
-int main() {  // testing
-    std::locale::global(std::locale("en_US.UTF-8"));
-    std::string file = "../c++.c-set-template/.template";
-    Template config(file);
-}
-

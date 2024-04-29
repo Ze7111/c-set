@@ -40,9 +40,13 @@ inline auto base_logger(const std::string &msg,
 
     std::time_t time_now = std::time(nullptr);
     std::array<char, 26> time_S = {};
+    #if defined(_WIN32 ) || defined(_WIN64)
     ctime_s(time_S.data(), time_S.size(), &time_now);
+    #else
+    ctime_r(&time_now, time_S.data());
+    #endif
     time_S[24] = time_S[25] = '\0';  // remove newline and null char
-    
+
     return level_S + colors::reset + " ~ " + colors::bg16::gray +
            time_S.data() + colors::reset + " ~ " + msg;
 }
