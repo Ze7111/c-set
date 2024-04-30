@@ -10,7 +10,7 @@ Usage:
 
 Note: This script requires the 'rich' and 'gitpython' packages to be installed.
       It does install them if they are not found.
-      
+
 Author: Dhruvan Kartik
 Date:   April 30 2024
 """
@@ -29,11 +29,12 @@ from typing import Any
 init_time: tuple[float, float] = [time.time(), -1]
 
 
-def get_compiler():
+def get_compiler(c_type: str):
     return (
         "cl.exe"
         if platform.system() == "Windows"
-        else "clang++" if platform.system() == "Darwin" else "g++"
+        else ("clang++" if c_type.lower() == "c++" else "clang")
+        if platform.system() == "Darwin" else ("g++" if c_type.lower() == "c++" else "gcc")
     )
 
 
@@ -42,8 +43,7 @@ def get_triple(compiler: str):
         return "x86_64-pc-windows-msvc"
     try:
         result = subprocess.run(
-            compiler,
-            "-dumpmachine",
+            [compiler, "-dumpmachine"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             check=True,
@@ -52,18 +52,19 @@ def get_triple(compiler: str):
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
         print(f"failed to get target triple: {e.stderr}")
-        return None
+        sys.exit()
     except FileNotFoundError:
         print("failed to find compiler")
-        return None
+        sys.exit()
 
 
-def get_standard():
-    return "c++latest" if COMPILER == "cl.exe" else "c++2b"
+def get_standard(c_type: str):
+    return f"{c_type.lower()}latest" if COMPILER == "cl.exe" else f"{c_type.lower()}2b"
 
-COMPILER:    str = get_compiler()
+C_TYPE:      str = "c++"
+COMPILER:    str = get_compiler(C_TYPE)
+STANDARD:    str = get_standard(C_TYPE)
 TARGET:      str = get_triple(COMPILER)
-STANDARD:    str = get_standard()
 DIRECTIVE:   str = "release" if len(sys.argv) > 2 and sys.argv[2] == "-r" else "debug"
 MAIN_FILE:   str = os.path.join(os.getcwd(), "main.cc")
 
@@ -75,7 +76,7 @@ DEV_PROMPT: str = (
     "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\Tools\\VsDevCmd.bat"
 )
 CLEAR:            bool = False    # clear the console after building
-LINKER: dict[str, str] = {"cl.exe": "link.exe", "clang": "clang++", "gcc": "g++"}
+LINKER: dict[str, str] = {"cl.exe": "link.exe", "clang": "ld", "gcc": "ld"}
 
 try:
     from rich.live import Live
@@ -108,6 +109,8 @@ except ImportError:
     sys.exit(1)
 
 CONSOLE: Console = Console()
+CLANG:   str     = "clang++" if C_TYPE.lower() == "c++" else "clang"
+GCC:     str     = "g++"     if C_TYPE.lower() == "c++" else "gcc"
 
 UNIX_COMPILE = [
     f"-std={STANDARD}",
@@ -149,11 +152,11 @@ SHARED_COMMANDS: dict[str, list[str]] = {
         + "main"
         + (".exe" if COMPILER == "cl.exe" else ""),
     ],
-    "clang": [
-        "clang++",
-        f"-target {TARGET}",
+    CLANG: [
+        CLANG,
+        f"--target={TARGET}",
     ],
-    "gcc": ["g++", f"target={TARGET}"],
+    GCC: [GCC, f"--target={TARGET}"],
 }
 
 COMPILE_COMMANDS = {
@@ -168,26 +171,26 @@ COMPILE_COMMANDS = {
             *WIN32_COMPILE,
         ],
     },
-    "clang": {
+    CLANG: {
         "release": [
-            *SHARED_COMMANDS["clang"],
+            *SHARED_COMMANDS[CLANG],
             *SHARED_COMMANDS["unix-release"],
             *UNIX_COMPILE,
         ],
         "debug": [
-            *SHARED_COMMANDS["clang"],
+            *SHARED_COMMANDS[CLANG],
             *SHARED_COMMANDS["unix-debug"],
             *UNIX_COMPILE,
         ],
     },
-    "gcc": {
+    GCC: {
         "release": [
-            *SHARED_COMMANDS["gcc"],
+            *SHARED_COMMANDS[GCC],
             *SHARED_COMMANDS["unix-release"],
             *UNIX_COMPILE,
         ],
         "debug": [
-            *SHARED_COMMANDS["gcc"],
+            *SHARED_COMMANDS[GCC],
             *SHARED_COMMANDS["unix-debug"],
             *UNIX_COMPILE,
         ],
@@ -209,26 +212,26 @@ LINK_COMMANDS = {
             *SHARED_COMMANDS["link-output"],
         ],
     },
-    "clang": {
+    CLANG: {
         "release": [
-            *SHARED_COMMANDS["clang"],
+            *SHARED_COMMANDS[CLANG],
             *SHARED_COMMANDS["unix-release"],
             *SHARED_COMMANDS["link-output"],
         ],
         "debug": [
-            *SHARED_COMMANDS["clang"],
+            *SHARED_COMMANDS[CLANG],
             *SHARED_COMMANDS["unix-debug"],
             *SHARED_COMMANDS["link-output"],
         ],
     },
-    "gcc": {
+    GCC: {
         "release": [
-            *SHARED_COMMANDS["gcc"],
+            *SHARED_COMMANDS[GCC],
             *SHARED_COMMANDS["unix-release"],
             *SHARED_COMMANDS["link-output"],
         ],
         "debug": [
-            *SHARED_COMMANDS["gcc"],
+            *SHARED_COMMANDS[GCC],
             *SHARED_COMMANDS["unix-debug"],
             *SHARED_COMMANDS["link-output"],
         ],
@@ -252,11 +255,10 @@ def run_command_with_dev(command: list[str]) -> None:
     os.system(" ".join(command))
 
 
-def run_command_without_dev(command: list[str]) -> None:
+def run_command_without_dev(command: list[str]) -> tuple[bytes, bytes]:
     return subprocess.Popen(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ).communicate()
-
 
 def is_valid() -> bool:
     if COMPILER == "cl.exe":
@@ -489,7 +491,7 @@ def check_files():
         LOG.warning("this is not recommended, add more files to compile")
         LOG.warning("to add more files, add them to the src folder")
         LOG.warning("or run the build tool from the src folder")
-        
+
     for file in files:
         if not os.path.exists(file):
             LOG.critical(f"failed to find {file}")
@@ -582,7 +584,7 @@ def init():
         f"build{PATH_SEP}{DIRECTIVE}{PATH_SEP}bin{PATH_SEP}main{'.exe' if COMPILER == 'cl.exe' else ''}"
     ):
         LOG.debug("no files have changed, skipping build")
-        
+
         build_times = 0
         link_time = 0
     else:
@@ -637,9 +639,13 @@ def init():
 if __name__ == "__main__":
     CONSOLE.print(
         Panel(
-            f"Ze7111 (R) Dhruvan's custom build tool V0.4 for '{TARGET}'\nCopyright {time.strftime('%Y')} (C) Apache License, Version 2.0."
+            f"Ze7111 (R) Dhruvan's custom build tool V0.9 for '{TARGET}'\nCopyright {time.strftime('%Y')} (C) Apache License, Version 2.0."
         )
     )
+    if COMPILER == "cl.exe" and platform.system() != "Windows":
+        LOG.critical("cl.exe is only available on windows")
+        sys.exit(1)
+
     if not os.path.exists(MAIN_FILE):
         LOG.critical(f"failed to find {MAIN_FILE}")
         sys.exit(1)
