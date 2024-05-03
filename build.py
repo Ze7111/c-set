@@ -291,7 +291,7 @@ def run_command(command: list[str]) -> tuple[bytes, bytes] | None:
     if return_code != b"" and not return_code.endswith(b"\r\n\r\n"):
         LOG.error(f"failed to run command: '{' '.join(command)}'")
         LOG.error(
-            f"'{command[0]}' failed with exit code: {return_code}, got the following output: \"{pipe.decode("utf-8")}\""
+            f"'{command[0]}' failed with exit code: {return_code.decode("utf-8")}, got the following output: \"{pipe.decode("utf-8")}\""
         )
         return None, None
 
@@ -424,7 +424,7 @@ def create_dirs():
 def check_compiler() -> bool:
     if COMPILER in COMPILE_COMMANDS:
         return True
- 
+
     LOG.error(f"'{COMPILER}' is not defined in the compiler commands")
 
     compilers: list[str] = list(COMPILE_COMMANDS.keys())
