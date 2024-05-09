@@ -66,7 +66,7 @@ COMPILER:    str = get_compiler(C_TYPE)
 STANDARD:    str = get_standard(C_TYPE)
 TARGET:      str = get_triple(COMPILER)
 DIRECTIVE:   str = "release" if len(sys.argv) > 2 and sys.argv[2] == "-r" else "debug"
-MAIN_FILE:   str = os.path.join(os.getcwd(), "main.cc")
+MAIN_FILE:   str = os.path.join(os.getcwd(), "src", "main.cc")
 
 DIRECTORIES: list[str] = ["/src"]
 INCLUDES:    list[str] = []
@@ -457,11 +457,14 @@ def generate_table() -> Table:
 
 
 def fork_compiler(workers: concurrent.futures.ThreadPoolExecutor):
-    global live_render, shutdown_live
+    global live_render, shutdown_live, files
     live_render = Live(generate_table(), refresh_per_second=10)
 
     render = threading.Thread(target=show_live_render)
     render.start()
+
+    # remove any duplicates in the files:
+    files = list(set(files))
 
     try:
         build_times: list[float] = [time.time(), -1]

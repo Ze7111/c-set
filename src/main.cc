@@ -28,7 +28,7 @@ following content:
 - copy files from the template directory to the current directory
 - copy folders from the template directory to the current directory
 - replace the placeholders in the files with the user's input
-- create a .c-set file in the current directory with the user's input
+- createx a .c-set file in the current directory with the user's input
 
 
 */
@@ -37,12 +37,14 @@ following content:
 #include <locale>
 #include <codecvt>
 
-#include "src/template/template.hh"
-#include "src/vm/vm.hh"
+#include "template/template.hh"
+#include "vm/vm.hh"
 
 auto main() -> int {
     std::locale::global(std::locale("en_US.UTF-8"));
-    //std::string file = "c++.c-set-template/.template";
-    //const Template config(file);
+    std::print("testing x96_x84 memory");
+
+    const vm::VirtualMachine virtual_machine;
+    virtual_machine.mem_test_x96_x84();
     return 0;
 }

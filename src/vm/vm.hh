@@ -4,45 +4,58 @@
 #include <any>
 #include <map>
 #include <typeindex>
-#include <typeinfo>
 #include <unordered_map>
+#include <utility>
 #include <vector>
+#include <variant>
 
 #include "../../pkgs/base/include.hh"
 namespace vm {
+const u32 num_registers = 96;
+using PrimType = std::variant<int, double, const char*, char*, std::string>;
+
+struct VM_Data {
+    private:
+        PrimType data;
+    protected:
+        VM_Data() = default;
+    public:
+        VM_Data(int value) : data(value) {}
+        VM_Data(double value) : data(value) {}
+        VM_Data(const char* value) : data(value) {}
+        VM_Data(char* value) : data(value) {}
+        VM_Data(std::string value) : data(value) {}
+    
+        ~VM_Data() = default;
+
+        template <typename T>
+        auto set(T value) -> void {
+            data = value;
+        }
+
+        template <typename T>
+        [[nodiscard]] auto get() const -> T {
+            return std::get<T>(data);
+        }
+
+        [[nodiscard]] auto get() const -> PrimType {
+            return data;
+        }
+};
 class Memory {
   private:
     std::map<u32, bool> locks;
-    std::vector<std::any> registers;
+    std::vector<u64> registers;
     friend struct Heap;
     friend struct Stack;
 
   public:
-    const  u32 num_registers = 96;
-    struct Heap;
-    struct Stack;
-
-    struct Data {
-      private:
-        std::pair<std::any, std::type_index> val =
-            std::make_pair(std::any(), std::type_index(typeid(void)));
-
-      public:
-        Data() = default;
-        Data(const Data &other) = default;
-        Data(Data &&other) noexcept = default;
-        Data &operator=(const Data &other) = default;
-        Data &operator=(Data &&other) noexcept = default;
-        Data(std::any val, std::type_index type)
-            : val(std::move(val), type){};
-        ~Data() = default;
-
-        template <typename T>
-        auto data() -> T* { return &std::any_cast<T>(&val.first); }
-        auto type() -> std::decay_t<decltype(val.second)>* { return &val.second; }
-    };
-
-    Memory(): registers(num_registers){};
+    Memory()
+        : registers(num_registers) {
+            for (u32 i = 0; i < num_registers; i++) {
+            registers[i] = 0;
+        }
+    }
     Memory(const Memory &other) = default;
     Memory(Memory &&other) noexcept = default;
     Memory &operator=(Memory &&other) = delete;
@@ -52,64 +65,93 @@ class Memory {
         locks.clear();
     }
 
-    auto set_register(u32 index, u64 value) -> void;
-    [[nodiscard]] auto get_register(u32 index) const -> u64;
-    [[nodiscard]] auto get_registers() const -> std::vector<u64>;
-
     class Heap {
       public:
-        explicit Heap(Memory *parent);
+        Heap() = delete;
+        explicit Heap(Memory *parent) : parent(parent) {};
+        Heap(const Heap &other) = default;
+        Heap(Heap &&other) noexcept = default;
+        Heap &operator=(const Heap &other) = delete;
+        Heap &operator=(Heap &&other) = delete;
         ~Heap() { clear(); }
 
-        auto lock(u32 addr) -> void;
-        auto unlock(u32 addr) -> void;
-        auto remove(u32 addr) -> void;
+        auto lock(u32 addr) const -> void;
+        auto unlock(u32 addr) const -> void;
+        auto remove(u32 addr) const -> void;
         auto clear() -> void;
-        auto set(u32 addr, Memory::Data value) -> void;
+        template <typename T>
+        auto set(u32 addr, T value) -> void;
         [[nodiscard]] auto empty() const -> bool;
-        [[nodiscard]] auto get(u32 addr) const -> Memory::Data;
+        template <typename T>
+        [[nodiscard]] auto get(u32 addr) const -> T;
+        [[nodiscard]] auto get(u32 addr) const -> PrimType;
         [[nodiscard]] auto contains(u32 addr) const -> bool;
         [[nodiscard]] auto is_locked(u32 addr) const -> bool;
-        [[nodiscard]] auto get() const -> std::unordered_map<u32, Memory::Data>;
+        [[nodiscard]] auto size() const -> u32;
+        
 
       private:
-        std::unordered_map<u32, Memory::Data> heap;
+        std::unordered_map<u32, VM_Data> heap;
         Memory *parent;
     };
 
     class Stack {
       public:
-        explicit Stack(Memory *parent);
+        Stack() = delete;
+        explicit Stack(Memory *parent) : parent(parent) {};
+        Stack(const Stack &other) = default;
+        Stack(Stack &&other) noexcept = default;
+        Stack &operator=(const Stack &other) = delete;
+        Stack &operator=(Stack &&other) = delete;
         ~Stack() { clear(); }
 
-        auto push(std::any value) -> void;
-        auto pop() -> std::any;
+
+        template <typename T>
+        auto push(T value) -> void;
+        template <typename T>
+        auto pop() -> T&;
         auto clear() -> void;
-        [[nodiscard]] auto front() const -> std::any;
-        [[nodiscard]] auto back() const -> std::any;
+        template <typename T>
+        [[nodiscard]] auto front() const -> T&;
+        template <typename T>
+        [[nodiscard]] auto back() const -> T&;
         [[nodiscard]] auto size() const -> u32;
         [[nodiscard]] auto empty() const -> bool;
-        [[deprecated("should not be used")]] auto pop(u8 index) -> std::any;
+        template <typename T>
+        [[deprecated("should not be used")]] auto pop(u8 index) -> T&;
 
       private:
-        std::vector<std::any> stack;
+        std::vector<VM_Data> stack;
         Memory *parent;
     };
+
+    auto set_register(u32 addr, u64 value) -> void;
+    [[nodiscard]] auto get_register(u32 addr) const -> u64;
+    [[nodiscard]] auto get_registers() const -> std::vector<u64>;
+    [[nodiscard]] auto is_locked(u32 addr) const -> bool;
+    auto lock_register(u32 addr) -> void;
+    auto unlock_register(u32 addr) -> void;
+
+    Heap *heap = new Heap(this);
+    Stack *stack = new Stack(this);
 };
 
 class VirtualMachine {
   public:
-    VirtualMachine();
-    void mem_test() {
-        heap.set(0x07CA053E7, Memory::Data("Hello, World!", typeid(std::string)));
-        heap.set(0x07CA053E8, Memory::Data(42, typeid(u64)));
-        heap.set(0x07CA053E9, Memory::Data(3.14, typeid(double)));
-    };
+    VirtualMachine() = default;
+    VirtualMachine(const VirtualMachine &other) = delete;
+    VirtualMachine(VirtualMachine &&other) noexcept = delete;
+    VirtualMachine &operator=(const VirtualMachine &other) = delete;
+    VirtualMachine &operator=(VirtualMachine &&other) = delete;
+    ~VirtualMachine() {
+        delete memory.heap;
+        delete memory.stack;
+    }
+
+    auto mem_test_x96_x84() const -> void;
 
   private:
     Memory memory;
-    Memory::Heap heap   = Memory::Heap(&memory);
-    Memory::Stack stack = Memory::Stack(&memory);
 };
 }  // namespace vm
 
