@@ -1,14 +1,18 @@
+#ifndef __TEMPLATE_H__
+#define __TEMPLATE_H__
+
 #include <algorithm>
 #include <map>
 #include <string>
 #include <vector>
 
 #include "../../incl/cds.hh"
+#include "token.hh"
 
 class Template : public ConfigDataSource {
   public:
     explicit Template(std::string &file);
-    ~Template();
+    ~Template() override;
     Template(const Template &other)
         : values(other.values)
         , filePath(other.filePath)
@@ -44,7 +48,7 @@ class Template : public ConfigDataSource {
     }
 
     auto save()      -> void;
-    virtual auto load()      -> void;
+    virtual auto load()      -> std::vector<lexer::token>;
     virtual auto close()     -> void;
     auto file_name() -> std::string { return filePath; }
 
@@ -69,11 +73,11 @@ class Template : public ConfigDataSource {
     auto remove(const std::string &key) -> void;
     auto clear() -> void;
 
-    auto is_open()  const -> bool { return open; };
-    auto validate() const -> bool { return valid; }
-    auto has(const std::string &key) const -> bool {
+    [[nodiscard]] auto is_open()  const -> bool { return open; };
+    [[nodiscard]] auto validate() const -> bool { return valid; }
+    [[nodiscard]] auto has(const std::string &key) const -> bool {
         return values.find(key) != values.end();
-    } auto compare(const std::string &key,
+    } [[nodiscard]] auto compare(const std::string &key,
                  const std::string &value) const -> bool {
         return values.at(key) == value;
     }
@@ -84,3 +88,5 @@ class Template : public ConfigDataSource {
     bool open;
     bool valid;
 };
+
+#endif // __TEMPLATE_H__

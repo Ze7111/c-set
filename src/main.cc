@@ -39,12 +39,25 @@ following content:
 
 #include "template/template.hh"
 #include "vm/vm.hh"
+#include "ast/tree.hh"
 
 auto main() -> int {
     std::locale::global(std::locale("en_US.UTF-8"));
     std::print("testing x96_x84 memory");
 
-    const vm::VirtualMachine virtual_machine;
-    virtual_machine.mem_test_x96_x84();
+    vm::TreeWalker tree_walker;
+    tree_walker.mem_test_x96_x84();
+
+    std::string file = "/Volumes/Container/Projects/c-set/c++.c-set-template/.template";
+    Template template_(file);
+    auto tokens = template_.load();
+    
+    std::print(colors::fg16::red, "---------------------- TREE GEN ----------------------", colors::reset);
+
+    Tree tree_(tokens, &tree_walker);
+    tree_.generate();
+
+    
+
     return 0;
 }

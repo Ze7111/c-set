@@ -1,6 +1,6 @@
 $(YEAR)         = time->year
 $(PROJECT)      *? "Whats the name for this project (default: \"main\"): "
-$(ENTRY)        = config - > entry_point | "${fileBasenameNoExtension}"# bullshit inline
+$(ENTRY)        = config->entry_point | "${fileBasenameNoExtension}"# bullshit inline
 $(NAME)         *! "Whats your name: " # 2 littrals in a row = error
 $(INCLUDES)     = "
     -I${workspaceFolder}/include,
@@ -8,6 +8,3 @@ $(INCLUDES)     = "
     -I${workspaceFolder}/lib
 "
 $(NUMBER)       = 1,286,382
-
-@win32 $(NUMBER) = "Hello, $(NAME)! you are using windows"
-# commet somehitng

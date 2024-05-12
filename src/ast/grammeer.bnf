@@ -1,0 +1,7 @@
+literal  -> [ A..Z | a..z | 0..9 | _ ]
+digit -> [ 0..9 | , ]
+string -> "\"" ... "\""
+variable -> "$(" literal ")"
+assignment -> variable [ = | * [! | ?]] | [literal"->"...] | digit | literal | string
+condition -> [[ if | elif ] [ variable | digit | literal | string | "@" literal ] &| [ == | != ] [ digit | literal | string ]] | else
+

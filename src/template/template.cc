@@ -17,7 +17,7 @@ Template::Template(std::string &file)
 
 Template::~Template() { close(); }
 
-auto Template::load() -> void {
+auto Template::load() -> std::vector<lexer::token> {
     if (open) {
         close();
     }
@@ -26,6 +26,8 @@ auto Template::load() -> void {
 
     open = true;
     valid = true;
+
+    return parsed;
 }
 
 auto Template::close() -> void {
