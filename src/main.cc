@@ -29,8 +29,6 @@ following content:
 - copy folders from the template directory to the current directory
 - replace the placeholders in the files with the user's input
 - createx a .c-set file in the current directory with the user's input
-
-
 */
 
 #include <utility>
@@ -56,8 +54,6 @@ auto main() -> int {
 
     Tree tree_(tokens, &tree_walker);
     tree_.generate();
-
-    
 
     return 0;
 }
