@@ -1,0 +1,76 @@
+Syntax rules for this file:
+---------------------------
+
+1.  **Variable Syntax:** Use the following syntax for variables: `$(VAR_NAME)`
+2.  **Comments Syntax:**
+    *   Comments must be on their own line and start with a hash (`#`) symbol.
+    *   No other character preceding the hash (`#`) symbol is allowed.
+3.  **Assignment Syntax:**
+    *   Use the following syntax for assignments: `$(VAR_NAME) = value`
+    *   Everything after the equals sign (`=`) is considered the value of the variable. There is no need to escape special characters.
+4.  **Restrictions:**
+    *   No multiline assignments are allowed.
+    *   No conditional statements are allowed.
+5.  **Accessing Values:**
+    *   If accessing a value from another source, use `<source>-><key>`
+    *   syntax, e.g., `config->key`.
+
+Defining another source:
+------------------------
+CDS
+To define another source, use the following syntax (example `TextFile` NOT `config`):
+```cpp
+// templates/text_file.cc
+#include "incl/cds.hh"
+#include <string>
+#include <map>
+
+class TextFile : public ConfigDataSource {
+public:
+    TextFile(std::string &file) { // example with an argument (optional)
+        // initialize the source here (e.g., open a file) and read the values
+    }
+
+    ~TextFile() {
+        // ...
+    }
+
+    std::string get(const std::string &key) override {
+        //...
+        return values[key]; // optional if you use the values map
+    }
+
+    // ...
+
+private:
+    std::map<std::string, std::string> values; // optional if you want to store the values (recommended)
+};
+```
+
+Then, in the `__use__` function in `loader.cc`, add the following line:
+```cpp
+// src/loader.cc
+if (source == "TextFile") {
+    #include "../templates/text_file.cc"
+
+    std::string file = new load::config(DEFAULT_CONFIG)->get("Text_File");
+    // OR ~ std::string file = config->get("Text_File");
+    return new TextFile(file);
+}
+```
+
+The `TextFile` class must inherit from `ConfigDataSource` and implement the `get` function. The `get` function should return the value of the key passed as an argument. The `values` map is optional, but it is recommended to use it to store the values.
+
+The `__use__` function in `loader.hh` should return an instance of the class that you defined.
+
+The `TextFile` class should be defined in a separate file (e.g., `text_file.cc`).
+
+Then you can use the `TextFile` source in `string.template` as follows:
+```cs
+// templates/string.template
+$(VAR_NAME) = TextFile->key
+```
+
+The `TextFile` source will be used to get the value of the key `key`.
+
+**Note:** The `TextFile` source is just an example. You can define any source you want.
