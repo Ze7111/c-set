@@ -2,149 +2,114 @@
 #define __VM_H__
 
 #include <any>
-#include <cstddef>
-#include <iostream>
 #include <map>
-#include <string>
+#include <typeindex>
+#include <typeinfo>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include "../../pkgs/base/include.hh"
 namespace vm {
 class Memory {
   private:
-    std::map<u16, bool> locks;
+    std::map<u32, bool> locks;
     std::vector<std::any> registers;
+    friend struct Heap;
+    friend struct Stack;
 
   public:
-    const u16 NUM_REGISTERS = 96;
+    const  u32 num_registers = 96;
+    struct Heap;
+    struct Stack;
 
-    Memory(const Memory &other) = default;
-    Memory &operator=(const Memory &other) = default;
-    Memory(Memory &&other) noexcept = default;
-    Memory &operator=(Memory &&other) = default;
-
-    Memory() { registers.resize(NUM_REGISTERS); };
-
-    auto set_register(u16 index, std::any value) -> void {
-        if (index >= NUM_REGISTERS) {
-            // panic
-            std::print(colors::fg16::red, "Register index out of bounds",
-                       colors::reset);
-        }
-        registers[index] = std::move(value);
-    };
-
-    auto get_register(u16 index) -> std::any {
-        if (index >= NUM_REGISTERS) {
-            // panic
-            std::print(colors::fg16::red, "Register index out of bounds",
-                       colors::reset);
-        }
-        return registers[index];
-    };
-
-    class Heap {
+    struct Data {
       private:
-        std::unordered_map<u16, std::any> heap;
-        Memory &parent;
+        std::pair<std::any, std::type_index> val =
+            std::make_pair(std::any(), std::type_index(typeid(void)));
 
       public:
-        Heap(Memory &parent)
-            : parent(parent) {}
+        Data() = default;
+        Data(const Data &other) = default;
+        Data(Data &&other) noexcept = default;
+        Data &operator=(const Data &other) = default;
+        Data &operator=(Data &&other) noexcept = default;
+        Data(std::any val, std::type_index type)
+            : val(std::move(val), type){};
+        ~Data() = default;
 
-        auto set(u16 addr, std::any value) -> void {
-            if (parent.locks[addr]) {
-                while (parent.locks[addr]) {
-                    // wait
-                }
-            }
-            parent.locks[addr] = true;
-            heap[addr] = std::move(value);
-            parent.locks[addr] = false;
-        }
+        template <typename T>
+        auto data() -> T* { return &std::any_cast<T>(&val.first); }
+        auto type() -> std::decay_t<decltype(val.second)>* { return &val.second; }
+    };
 
-        auto get(u16 addr) -> std::any { return heap[addr]; }
-        auto lock(u16 addr) -> void { parent.locks[addr] = true; }
-        auto unlock(u16 addr) -> void { parent.locks[addr] = false; }
-        auto is_locked(u16 addr) -> bool { return parent.locks[addr]; }
-        auto clear() -> void { heap.clear(); }
-        auto remove(u16 addr) -> void { heap.erase(addr); }
-        auto get() -> std::unordered_map<u16, std::any> { return heap; }
-        auto set(std::unordered_map<u16, std::any> new_heap) -> void {
-            heap = std::move(new_heap);
-        }
+    Memory(): registers(num_registers){};
+    Memory(const Memory &other) = default;
+    Memory(Memory &&other) noexcept = default;
+    Memory &operator=(Memory &&other) = delete;
+    Memory &operator=(const Memory &other) = delete;
+    ~Memory() {
+        registers.clear();
+        locks.clear();
+    }
 
-        auto contains(u16 addr) -> bool { return heap.contains(addr); }
-        auto empty() -> bool { return heap.empty(); }
-        auto validate(u16 addr) -> bool {
-            // check if an addr is not null
-            if (this->contains(addr)) {
-                return std::any_cast<void *>(this->get(addr)) != nullptr;
-            }
-            return false;
-        };
+    auto set_register(u32 index, u64 value) -> void;
+    [[nodiscard]] auto get_register(u32 index) const -> u64;
+    [[nodiscard]] auto get_registers() const -> std::vector<u64>;
+
+    class Heap {
+      public:
+        explicit Heap(Memory *parent);
+        ~Heap() { clear(); }
+
+        auto lock(u32 addr) -> void;
+        auto unlock(u32 addr) -> void;
+        auto remove(u32 addr) -> void;
+        auto clear() -> void;
+        auto set(u32 addr, Memory::Data value) -> void;
+        [[nodiscard]] auto empty() const -> bool;
+        [[nodiscard]] auto get(u32 addr) const -> Memory::Data;
+        [[nodiscard]] auto contains(u32 addr) const -> bool;
+        [[nodiscard]] auto is_locked(u32 addr) const -> bool;
+        [[nodiscard]] auto get() const -> std::unordered_map<u32, Memory::Data>;
+
+      private:
+        std::unordered_map<u32, Memory::Data> heap;
+        Memory *parent;
     };
 
     class Stack {
+      public:
+        explicit Stack(Memory *parent);
+        ~Stack() { clear(); }
+
+        auto push(std::any value) -> void;
+        auto pop() -> std::any;
+        auto clear() -> void;
+        [[nodiscard]] auto front() const -> std::any;
+        [[nodiscard]] auto back() const -> std::any;
+        [[nodiscard]] auto size() const -> u32;
+        [[nodiscard]] auto empty() const -> bool;
+        [[deprecated("should not be used")]] auto pop(u8 index) -> std::any;
+
       private:
         std::vector<std::any> stack;
-        Memory &parent;
-
-      public:
-        Stack(Memory &parent)
-            : parent(parent) {}
-
-        auto push(std::any value) -> void { stack.push_back(std::move(value)); }
-        auto pop() -> std::any {
-            if (stack.empty()) {
-                // panic
-                std::print(colors::fg16::red, "Stack underflow", colors::reset);
-            }
-            auto value = stack.back();
-            stack.pop_back();
-            return value;
-        }
-
-        auto top() -> std::any {
-            if (stack.empty()) {
-                // panic
-                std::print(colors::fg16::red, "Stack underflow", colors::reset);
-            }
-            return stack.back();
-        }
-
-        auto clear() -> void { stack.clear(); }
-        auto size() -> u16 { return stack.size(); }
-        auto empty() -> bool { return stack.empty(); }
+        Memory *parent;
     };
-    friend struct Heap;
 };
 
 class VirtualMachine {
+  public:
+    VirtualMachine();
+    void mem_test() {
+        heap.set(0x07CA053E7, Memory::Data("Hello, World!", typeid(std::string)));
+        heap.set(0x07CA053E8, Memory::Data(42, typeid(u64)));
+        heap.set(0x07CA053E9, Memory::Data(3.14, typeid(double)));
+    };
+
   private:
     Memory memory;
-
-  public:
-    VirtualMachine(const VirtualMachine &other) = default;
-    VirtualMachine &operator=(const VirtualMachine &other) = default;
-    VirtualMachine(VirtualMachine &&other) noexcept = default;
-    VirtualMachine &operator=(VirtualMachine &&other) = default;
-
-    VirtualMachine() = default;
-
-    auto test_mem() -> void {
-        Memory mem;
-        mem.set_register(0, 10);
-        std::print(mem.get_register(0));
-        Memory::Heap heap(mem);
-        heap.set(0, 10);
-        std::print(heap.get(0));
-        heap.lock(0);
-        heap.set(0, 20);
-        std::print(heap.get(0));
-    }
+    Memory::Heap heap   = Memory::Heap(&memory);
+    Memory::Stack stack = Memory::Stack(&memory);
 };
 }  // namespace vm
 

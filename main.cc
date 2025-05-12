@@ -38,10 +38,11 @@ following content:
 #include <codecvt>
 
 #include "src/template/template.hh"
+#include "src/vm/vm.hh"
 
 auto main() -> int {
     std::locale::global(std::locale("en_US.UTF-8"));
-    std::string file = "c++.c-set-template/.template";
-    const Template config(file);
+    //std::string file = "c++.c-set-template/.template";
+    //const Template config(file);
     return 0;
 }
