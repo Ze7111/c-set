@@ -2,11 +2,13 @@ add_rules("mode.debug", "mode.release")
 
 target("c-set")
     set_kind("binary")
-    add_files("src/**/*.cc")
-    add_files("src/*.cc")
+    add_files("src/**.cc")
+    add_headerfiles("src/**.hh")
+    add_includedirs("src")
     -- set the stander c++ version to c++2b
-    set_languages("c++2b")
-    set_optimize("fastest")
+    set_languages("c++23")
+    -- set_optimize("fastest")
+    -- set_policy("build.ccache", true)
     -- enable multi-thread compilation
     
 

@@ -1,59 +1,97 @@
-/*
-flow:
+#include <codecvt>
+#include <fstream>
+#include <iostream>
+#include <locale>
+#include <string>
+#include <vector>
 
-run 1:
-$ ./c-set
-? do you want to add the path to the user PATH? [y/n]: y
-? default compiler? [none]: g++
-? default standard? [none]: 17
-? default build type? [none] (r|d): r
+#include "ast/ast.hh"
+#include "ast/parser.hh"
+#include "lexer/lexer.hh"
+#include "lexer/tokens.hh"
+#include "thread/worker.hh"
+#include "vm/codegen.hh"
+#include "vm/vm.hh"
 
-run 2 ( if no compiler, standard, or build type is set ):
-$ ./c-set
-? use entry point? [y/n]: y
-    ? entry file name? [main] (created if it does not exist): main.cc
-? which compiler? [none]: g++
-? which standard? [none]: 17
-? which build type? [none] (r|d): r
-
-- if the user chooses to use the entry point, the file is created with the
-following content:
-    #include "incl/default.hh"
-
-    auto main() -> int {
-        std_v2::print("Hello, World!");
-        return 0;
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        std::wcerr << L"Usage: " << argv[0] << L" <source-file>\n";
+        return 1;
     }
 
-- copy files from the template directory to the current directory
-- copy folders from the template directory to the current directory
-- replace the placeholders in the files with the user's input
-- createx a .c-set file in the current directory with the user's input
-*/
-
-#include <utility>
-#include <locale>
-#include <codecvt>
-
-#include "template/template.hh"
-#include "vm/vm.hh"
-#include "ast/tree.hh"
-
-auto main() -> int {
     std::locale::global(std::locale("en_US.UTF-8"));
-    std::print("testing x96_x84 memory");
 
-    vm::TreeWalker tree_walker;
-    tree_walker.mem_test_x96_x84();
+    std::wstring filename =
+        std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(argv[1]);
+    std::wcout << L"Reading source file: " << filename << std::endl;
 
-    std::string file = "/Volumes/Container/Projects/c-set/c++.c-set-template/.template";
-    Template template_(file);
-    auto tokens = template_.load();
-    
-    std::print(colors::fg16::red, "---------------------- TREE GEN ----------------------", colors::reset);
+    // lexing
+    std::wcout << L"--- Lexing ---" << std::endl;
+    using ThreadManager = WorkerThread;
+    ThreadManager worker;
+    Lexer::Lexer<ThreadManager> lexer(filename, &worker);
 
-    Tree tree_(tokens, &tree_walker);
-    tree_.generate();
+    std::vector<Lexer::Token> tokens;
+    for (auto t : lexer.tokenize()) {
+        tokens.push_back(t);
+        std::wcout << L"Token: " << t.value << L" (" << static_cast<int>(t.kind)
+                   << L")\n";
+    }
 
+    if (tokens.empty()) {
+        std::wcerr << L"No tokens produced. Exiting.\n";
+        return 1;
+    }
+
+    // parsing
+    std::wcout << L"\n--- Parsing ---" << std::endl;
+    ParserContext ctx;
+    Parser parser(tokens, ctx);
+    ASTNodePtr ast = parser.parse_program();
+
+    if (!ast) {
+        std::wcerr << L"Parsing failed. Exiting.\n";
+        return 1;
+    }
+    std::wcout << L"AST successfully built.\n";
+
+    // code generation
+    std::wcout << L"\n--- Code Generation ---" << std::endl;
+    CodeGen codegen;
+    Bytecode bytecode;
+    try {
+        bytecode = codegen.generate(ast);
+    } catch (const std::exception &ex) {
+        std::wcerr << L"Code generation error: " << ex.what() << std::endl;
+        return 1;
+    }
+    std::wcout << L"Bytecode generated (" << bytecode.size()
+               << L" instructions):\n";
+    for (size_t i = 0; i < bytecode.size(); ++i) {
+        const auto &instr = bytecode[i];
+        std::wcout << i << L": " << static_cast<int>(instr.op);
+        if (std::holds_alternative<int64_t>(instr.operand)) {
+            std::wcout << L" " << std::get<int64_t>(instr.operand);
+        } else if (std::holds_alternative<std::wstring>(instr.operand)) {
+            std::wcout << L" \"" << std::get<std::wstring>(instr.operand)
+                       << L"\"";
+        } else if (std::holds_alternative<size_t>(instr.operand)) {
+            std::wcout << L" @" << std::get<size_t>(instr.operand);
+        }
+        std::wcout << std::endl;
+    }
+
+    // vm execution
+    std::wcout << L"\n--- VM Execution ---" << std::endl;
+    VM vm;
+    vm.load(bytecode, codegen.ctx.globals.size());
+    try {
+        vm.run();
+    } catch (const std::exception &ex) {
+        std::wcerr << L"Runtime error: " << ex.what() << std::endl;
+        return 1;
+    }
+
+    std::wcout << L"Execution finished successfully.\n";
     return 0;
 }
