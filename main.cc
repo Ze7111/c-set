@@ -32,9 +32,11 @@ following content:
 
 
 */
-#include "lib/default.hh"
+#include "src/template/template.cc" //
 
 auto main() -> int {
-    std_v2::print("Hello, World!");
+    std::locale::global(std::locale("en_US.UTF-8"));
+    std::string file = "c++.c-set-template/.template";
+    const Template config(file);
     return 0;
 }

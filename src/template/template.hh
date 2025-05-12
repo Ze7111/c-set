@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "../incl/cds.hh"
+#include "../../incl/cds.hh"
 
 class Template : public ConfigDataSource {
   public:

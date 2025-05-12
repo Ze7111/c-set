@@ -15,7 +15,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../pkgs/base/include.hh"
+#include "../../pkgs/base/include.hh"
 
 /*
     (! ? = | & *) // operator
@@ -283,6 +283,8 @@ fix: remove ';' from the line
 template <typename T>  // if std::string(T) is possible
 concept stringable = requires(T obj) { std::string(obj); };
 
+static bool error_occured;
+
 struct TemplateError {
     std::string error_message;
     std::string fix_message;
@@ -292,11 +294,14 @@ struct TemplateError {
     // Constructor to initialize the struct
     TemplateError(std::string errorMsg, std::string fixMsg)
         : error_message(std::move(errorMsg))
-        , fix_message(std::move(fixMsg)) {}
+        , fix_message(std::move(fixMsg)) {
+            error_occured = false;
+        }
 
     void show(const std::string &file_name, const std::string &line_str,
               u64 line, u64 col, int offset = 1) {
         // loop over all the %s and replace them with the arguments
+        error_occured = true;
         size_t index = 0;
         for (const auto &arg : error_fmt_args) {
             auto pos = error_message.find("%s", index);
@@ -597,11 +602,11 @@ inline auto lex(std::string &file) -> std::vector<token> {
 
     //TIME_IT(parse(f_data, file));
     std::vector<token> parsed = parse(f_data, file);
-    for (const token &tok : parsed) {
-        std_v2::print(lexer::token_to_string(tok));
+    if (!error_occured) {
+        for (const token &tok : parsed) {
+            std_v2::print(lexer::token_to_string(tok));
+        }
     }
-
-    //std_v2::print(duration.count());
 
     return parsed;
 }
