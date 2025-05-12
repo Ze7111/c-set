@@ -64,7 +64,7 @@ class Tree {
 
     auto get_only_line(u64 &current) -> std::vector<lexer::token> {
         const u64 end = get_eol(current);
-        std::vector<lexer::token> output = {base_tokens.data() + current, base_tokens.data() + end};
+        std::vector<lexer::token> output(base_tokens.begin() + current, base_tokens.begin() + end);
         current = end;
         return output;
     }
