@@ -1,0 +1,37 @@
+$(YEAR)         = time->year
+$(PROJECT)      *? "Whats the name for this project (default: \"main\"): "
+$(ENTRY)        = config->entry_point | "${fileBasenameNoExtension}"# bullshit inline
+$(NAME)         *! "Whats your name: " # 2 littrals in a row = error
+$(INCLUDES)     = "
+    -I${workspaceFolder}/include,
+    -I${workspaceFolder}/src,
+    -I${workspaceFolder}/lib
+"
+$(NUMBER)       = 1,286,382
+
+
+# following needs to be built into ast/sema
+# imports: "import" id ("," id)*
+# vars: "var" id "=" expr
+# numbers: 0..9+ | (0..9+ "." 0..9+)
+# string: "'" .* "'" | '"' .* '"'
+# literals: numbers | string
+# quals: expr ("->" expr)+
+# function calls: id "(" (expr | (id ":" expr))* ")"
+# id: a..zA..Z0..9_
+# if_state: "if" expr "{" state* "}" ["else" "if" expr "{" state* "}"]* ["else" "{" state* "}"]
+# function: function id "(" id* ")" "{" state* "}"
+# exprs: function_call | id | qual | literal
+# state: if_state | function | expr
+
+# sanitize_input | input_once
+
+import time   # time.hlx (defined in c-set/modules)
+import config
+
+# we have a few ops built in:
+# the | it will default to the first value thats not null
+
+var year    = time->get_year()
+var project = sanitize_input("Whats the name for this project (default: \"main\"): " default: "main")
+var entry   = config->get_key("entry_point") | "${fileBasenameNoExtension}"
