@@ -1,126 +1,9 @@
+#ifndef __PY_STL_H__
+#define __PY_STL_H__
+
 // a wrapper to make most of the std functions available in a pythonic way
 // so like instead of doing std::cout << "Hello, World!" << std::endl;
 // you can do print("Hello, World!");
-// print and input are already defined in quick_io.hh
-
-/*
-
-A
-abs()
-aiter()
-all()
-anext()
-any()
-ascii()
-
-B
-bin()
-bool()
-breakpoint()
-bytearray()
-bytes()
-
-C
-callable()
-chr()
-classmethod()
-compile()
-complex()
-
-D
-delattr()
-dict()
-dir()
-divmod()
-
-E
-enumerate()
-eval()
-exec()
-
-F
-filter()
-float()
-format()
-frozenset()
-
-G
-getattr()
-globals()
-
-H
-hasattr()
-hash()
-help()
-hex()
-
-I
-id()
-input()
-int()
-isinstance()
-issubclass()
-iter()
-L
-len()
-list()
-locals()
-
-M
-map()
-max()
-memoryview()
-min()
-
-N
-next()
-
-O
-object()
-oct()
-open()
-ord()
-
-P
-pow()
-print()
-property()
-
-
-
-
-R
-range()
-repr()
-reversed()
-round()
-
-S
-set()
-setattr()
-slice()
-sorted()
-staticmethod()
-str()
-sum()
-super()
-
-T
-tuple()
-type()
-
-V
-vars()
-
-Z
-zip()
-
-_
-__import__()
-*/
-
-#ifndef CUSTOM_STL_H
-#define CUSTOM_STL_H
 
 #include <any>
 #include <array>
@@ -135,15 +18,9 @@ __import__()
 #include <utility>
 #include <vector>
 
-namespace std_v2 {
+namespace std {
     using str = std::string;
-    template <typename T>
-    using list = std::list<T>;
-    template <typename T>
-    using vec = std::vector<T>;
-    template <typename T, size_t N>
-    using arr = std::array<T, N>;
-
+    
     namespace c_types {
         template <typename T>
         using uptr = std::unique_ptr<T>;
@@ -165,16 +42,6 @@ namespace std_v2 {
 
     template <typename T>
     using Any = std::any;
-    template <typename T, typename U>
-    using is_same = std::is_same<T, U>;
-    template <typename T>
-    using remove_cv = std::remove_cv<T>;
-    template <typename T>
-    using remove_reference = std::remove_reference<T>;
-    template <typename T>
-    using remove_cvref = remove_cv<remove_reference<T>>;
-    template <typename T>
-    using remove_pointer = std::remove_pointer<T>;
 
     template <typename T>
     inline T *allocate(size_t size) {
@@ -244,33 +111,17 @@ namespace std_v2 {
         return container.size();
     }
 
-    template <typename T>
-    inline vec<T> range(T start, T end, T step = 1) {
-        vec<T> result;
-        for (T i = start; i < end; i += step) {
-            result.push_back(i);
-        }
-        return result;
-    }
-    template <typename T>
-    inline vec<T> range(T end) {
-        return range<T>(0, end);
-    }
-    template <typename T>
-    inline vec<T> range(T end, T step) {
-        return range<T>(0, end, step);
-    }
-
+    
     template <typename... Args>
     inline auto sum(Args... args) {
         return (args + ...);
     }
     template <typename T>
-    inline T sum(vec<T> &container) {
+    inline T sum(vector<T> &container) {
         return std::accumulate(container.begin(), container.end(), 0);
     }
     template <typename T, size_t N>
-    inline T sum(arr<T, N> &container) {
+    inline T sum(array<T, N> &container) {
         return std::accumulate(container.begin(), container.end(), 0);
     }
     template <typename T>
@@ -283,11 +134,11 @@ namespace std_v2 {
         return container.pop_front();
     }
     template <typename T>
-    inline T next(vec<T> &container) {
+    inline T next(vector<T> &container) {
         return container.pop_back();
     }
     template <typename T, size_t N>
-    inline T next(arr<T, N> &container) {
+    inline T next(array<T, N> &container) {
         return container.pop_back();
     }
     template <typename T>
@@ -441,4 +292,4 @@ namespace std_v2 {
     };
 }  // namespace std_v2
 
-#endif  // CUSTOM_STL_H
+#endif // __PY_STL_H__

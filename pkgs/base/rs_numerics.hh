@@ -36,7 +36,8 @@
  * Commons, PO Box 1866, Mountain View, CA 94042, USA.
  * @see http://creativecommons.org/licenses/by/4.0/
  */
-#pragma once
+#ifndef __BETTER_INT_TYPES_H__
+#define __BETTER_INT_TYPES_H__
 
 #include <cstdint>
 
@@ -164,3 +165,5 @@ using usize_max = uintmax_t;
 #define UMAX_C(x) U64_C(x)
 
 #endif // _VCRT_COMPILER_PREPROCESSOR
+
+#endif // __BETTER_INT_TYPES_H__

@@ -3,9 +3,6 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <utility>
-#include <locale>
-#include <codecvt>
 
 #include "../../pkgs/base/include.hh"
 #include "lexer.hh"

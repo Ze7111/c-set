@@ -32,7 +32,12 @@ following content:
 
 
 */
-#include "src/template/template.cc" //
+
+#include <utility>
+#include <locale>
+#include <codecvt>
+
+#include "src/template/template.hh"
 
 auto main() -> int {
     std::locale::global(std::locale("en_US.UTF-8"));
