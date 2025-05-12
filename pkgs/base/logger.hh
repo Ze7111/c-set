@@ -51,7 +51,7 @@ inline auto base_logger(const std::string &msg,
            time_S.data() + colors::reset + " ~ " + msg;
 }
 
-auto log(const std::string &msg, LogLevel level = LogLevel::INFO) -> void {
+inline auto log(const std::string &msg, LogLevel level = LogLevel::INFO) -> void {
     std::cout << base_logger(msg, level) << '\n';
 }
 
@@ -63,7 +63,7 @@ concept HasToString = requires(T &&obj) {
 // anything that has a .to_string() method can be logged
 template <typename T>
     requires HasToString<T>
-auto log(T &obj, const std::string &msg, LogLevel level = LogLevel::INFO)
+inline auto log(T &obj, const std::string &msg, LogLevel level = LogLevel::INFO)
     -> void {
     // format: base_logger ~ <obj_type at address> >> obj
     std::cout << base_logger(msg, level) << " ~ " << colors::fg16::yellow << "<"
@@ -73,7 +73,7 @@ auto log(T &obj, const std::string &msg, LogLevel level = LogLevel::INFO)
 }
 
 template <typename T>
-auto log(T &obj, const std::string &msg, LogLevel level = LogLevel::INFO) -> void {
+inline auto log(T &obj, const std::string &msg, LogLevel level = LogLevel::INFO) -> void {
     try {
         std::cout << base_logger(msg, level) << " ~ " << colors::fg16::yellow << "<"
               << "obj" << " at " << &obj << ">" << colors::reset

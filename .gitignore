@@ -58,7 +58,6 @@ html/
 ################################
 ########### VS CODE ############
 ################################
-.vscode/settings.json
 .vscode/c_cpp_properties.json
 *.code-workspace
 .history
@@ -144,3 +143,9 @@ ipch/
 
 # Visual Studio Trace Files
 *.e2e
+
+# Xmake cache
+.xmake/
+
+# MacOS Cache
+.DS_Store
