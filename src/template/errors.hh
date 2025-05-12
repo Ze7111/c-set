@@ -51,20 +51,20 @@ class TTPanic {
             index = pos + 2;
         }
 
-        std::cout << std::string(colors::fg16::red) << "error"
+        std::cout << std::string(colors::fg16::red ) << "error"
                   << std::string(colors::fg16::cyan) << ": "
                   << std::string(colors::reset) << error_message << '\n';
-        std::cout << "     " <<  std::string(colors::fg16::cyan) << "├─> "
+        std::cout << "     " << std::string(colors::fg16::cyan) << "├─> "
                   << std::string(colors::reset) << "at "
                   << std::string(colors::fg16::green) << file_name
                   << std::string(colors::reset) << ":"
-                  << std::string(colors::fg16::yellow) << line
+                  << std::string(colors::fg16::yellow) << line+1
                   << std::string(colors::reset) << ":"
-                  << std::string(colors::fg16::yellow) << col
+                  << std::string(colors::fg16::yellow) << col+1
                   << std::string(colors::reset) << '\n';
-        std::cout << "     " <<  std::string(colors::fg16::cyan) << ": "
+        std::cout << "     " << std::string(colors::fg16::cyan) << ": "
                   << std::string(colors::reset) << line_str;
-        std::cout << "     " <<  std::string(colors::fg16::cyan) << "│ "
+        std::cout << "     " << std::string(colors::fg16::cyan) << "│ "
                   << std::string(colors::reset) << std::string(col, ' ')
                   << std::string(colors::fg16::yellow)
                   << std::string(offset, '^') << std::string(colors::reset)

@@ -35,11 +35,13 @@ namespace lexer {
 };
 
 struct token {
+    u64 row;
+    u64 col;
     token_type type;
     std::string value;
 };
 
-const char *staticMap(char chr) {
+inline const char *staticMap(char chr) {
     switch (chr) {
     case '\a':
         return "\\a";
@@ -59,7 +61,7 @@ const char *staticMap(char chr) {
     return nullptr;
 }
 
-std::string escape_cpp(const std::string &input) {
+inline std::string escape_cpp(const std::string &input) {
     std::stringstream s_stream;
     for (char chr : input) {
         const char *_str_ = staticMap(chr);

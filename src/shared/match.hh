@@ -66,29 +66,29 @@
     case '8':       \
     case '9'
 
-#define digit _0_9 : case '-'
+#define digit _0_9 : case ','
 
-#define punctuation(next, tokens)             \
-    '!' : tokens.push_back({OPTIONAL, "!"});  \
+#define punctuation(next, tokens, line_num, chr_index) \
+    '!' : tokens.push_back({line_num, chr_index, OPTIONAL, "!"});  \
     continue;                                 \
     case '?':                                 \
-        tokens.push_back({ALWAYS, "?"});      \
+        tokens.push_back({line_num, chr_index, ALWAYS, "?"});      \
         continue;                             \
     case '=':                                 \
-        tokens.push_back({ASSIGN, "="});      \
+        tokens.push_back({line_num, chr_index, ASSIGN, "="});      \
         continue;                             \
     case '|':                                 \
-        tokens.push_back({LOGICAL_OR, "|"});  \
+        tokens.push_back({line_num, chr_index, LOGICAL_OR, "|"});  \
         continue;                             \
     case '&':                                 \
-        tokens.push_back({LOGICAL_AND, "&"}); \
+        tokens.push_back({line_num, chr_index, LOGICAL_AND, "&"}); \
         continue;                             \
     case '*':                                 \
-        tokens.push_back({SAFE, "*"});        \
+        tokens.push_back({line_num, chr_index, SAFE, "*"});        \
         continue;                             \
     case '-':                                 \
         if (next == '>') {                    \
-            tokens.push_back({GET, "->"});    \
+            tokens.push_back({line_num, chr_index, GET, "->"});    \
             ++chr_index;                      \
             ++ ++tail;                        \
             continue;                         \
