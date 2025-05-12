@@ -132,6 +132,7 @@ __import__()
 #include <numeric>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace std_v2 {
@@ -177,18 +178,21 @@ namespace std_v2 {
 
     template <typename T>
     inline T *allocate(size_t size) {
-        auto ptr = malloc(size + 1);
-        if (ptr == nullptr)
+        auto ptr = std::make_unique<T[]>(size + 1);
+        if (ptr == nullptr) {
             throw std::bad_alloc();
-
-        if constexpr (is_same<T, char>::value)
-            ((char *)ptr)[size] = '\0';
-        if constexpr (is_same<T, wchar_t>::value)
-            ((wchar_t *)ptr)[size] = L'\0';
-        if constexpr (is_same<T, char16_t>::value)
-            ((char16_t *)ptr)[size] = u'\0';
-        if constexpr (is_same<T, char32_t>::value)
-            ((char32_t *)ptr)[size] = U'\0';
+        }
+        if constexpr (is_same<T, char>::value) {
+            ptr[size] = '\0';
+        } else if constexpr (is_same<T, wchar_t>::value) {
+            ptr[size] = L'\0';
+        } else if constexpr (is_same<T, char16_t>::value) {
+            ptr[size] = u'\0';
+        } else if constexpr (is_same<T, char32_t>::value) {
+            ptr[size] = U'\0';
+        } else {
+            ptr[size] = nullptr;  // nullptr for other types
+        }
 
         return (T *)ptr;
     }
@@ -216,24 +220,24 @@ namespace std_v2 {
         inline double pow(double base, double exponent) {
             return std::pow(base, exponent);
         }
-        inline double sqrt(double value) { return std::sqrt(value); }
-        inline double cbrt(double value) { return std::cbrt(value); }
         inline double hypot(double x, double y) { return std::hypot(x, y); }
-        inline double exp(double value) { return std::exp(value); }
-        inline double log(double value) { return std::log(value); }
+        inline double sqrt(double value)  { return std::sqrt(value); }
+        inline double cbrt(double value)  { return std::cbrt(value); }
+        inline double exp(double value)   { return std::exp(value); }
+        inline double log(double value)   { return std::log(value); }
         inline double log10(double value) { return std::log10(value); }
-        inline double sin(double value) { return std::sin(value); }
-        inline double cos(double value) { return std::cos(value); }
-        inline double tan(double value) { return std::tan(value); }
-        inline double asin(double value) { return std::asin(value); }
-        inline double acos(double value) { return std::acos(value); }
-        inline double atan(double value) { return std::atan(value); }
-        inline double sinh(double value) { return std::sinh(value); }
-        inline double cosh(double value) { return std::cosh(value); }
-        inline double tanh(double value) { return std::tanh(value); }
-        inline int rand() { return std::rand(); }
+        inline double sin(double value)   { return std::sin(value); }
+        inline double cos(double value)   { return std::cos(value); }
+        inline double tan(double value)   { return std::tan(value); }
+        inline double asin(double value)  { return std::asin(value); }
+        inline double acos(double value)  { return std::acos(value); }
+        inline double atan(double value)  { return std::atan(value); }
+        inline double sinh(double value)  { return std::sinh(value); }
+        inline double cosh(double value)  { return std::cosh(value); }
+        inline double tanh(double value)  { return std::tanh(value); }
         inline void srand(unsigned int seed) { std::srand(seed); }
-    }  // namespace math_functions
+        inline int rand() { return std::rand(); }
+    }  // namespace math
 
     template <typename T>
     size_t len(T &container) {
@@ -243,8 +247,9 @@ namespace std_v2 {
     template <typename T>
     inline vec<T> range(T start, T end, T step = 1) {
         vec<T> result;
-        for (T i = start; i < end; i += step)
+        for (T i = start; i < end; i += step) {
             result.push_back(i);
+        }
         return result;
     }
     template <typename T>
@@ -330,21 +335,30 @@ namespace std_v2 {
     inline str ascii(unsigned long value) { return std::to_string(value); }
     inline str ascii(unsigned long long value) { return std::to_string(value); }
 
-    inline str format(str fmt, auto... args) {
-        return std::format(fmt, args...); // C++20
-    }
+    //inline str format(str fmt, auto... args) {
+    //    return std::format(fmt, args...);
+    //}
 
     namespace sysIO {
         using endl = struct endl {
             std::string end_l = "\n";
             endl() = default;
-            endl(const std::string &end) : end_l(end) {}
-            endl(const char *end) : end_l(end) {}
-            endl(const char end) : end_l(std::string(1, end)) {}
-            endl(const endl &end) : end_l(end.end_l) {}
-            friend std::ostream &operator<<(std::ostream &os, const endl &end) {
-                os << end.end_l;
-                return os;
+            explicit endl(std::string end)
+                : end_l(std::move(end)) {}
+            explicit endl(const char *end)
+                : end_l(end) {}
+            explicit endl(const char end)
+                : end_l(std::string(1, end)) {}
+            endl(const endl &end) = default;
+            endl(endl &&) = default;  // Add move constructor
+            endl &
+            operator=(const endl &) = default;   // Add copy assignment operator
+            endl &operator=(endl &&) = default;  // Add move assignment operator
+            ~endl() = default;                   // Add destructor
+            friend std::ostream &operator<<(std::ostream &oss,
+                                            const endl &end) {
+                oss << end.end_l;
+                return oss;
             }
         };
     }  // namespace sysIO
@@ -355,13 +369,15 @@ namespace std_v2 {
             return;
         };
         (std::cout << ... << args);
-        if constexpr (sizeof...(args) > 0)
+        if constexpr (sizeof...(args) > 0) {
             if constexpr (!std::is_same_v<
                               std::remove_cv_t<std::remove_reference_t<
                                   decltype(std::get<sizeof...(args) - 1>(
                                       std::tuple<Args...>(args...)))>>,
-                              sysIO::endl>)
+                              sysIO::endl>) {
                 std::cout << sysIO::endl('\n');
+            }
+        }
     }
     class input {
       private:
@@ -369,24 +385,24 @@ namespace std_v2 {
 
       public:
         input() { std::getline(std::cin, _input); }
-        input(std::string prompt) {
+        explicit input(const std::string &prompt) {
             print(prompt, sysIO::endl(" > "));
             std::getline(std::cin, _input);
         }
-        input(std::string prompt, std::string end) {
+        input(const std::string &prompt, std::string end) {
+            print(prompt, sysIO::endl(std::move(end)));
+            std::getline(std::cin, _input);
+        }
+        input(const std::string &prompt, char end) {
             print(prompt, sysIO::endl(end));
             std::getline(std::cin, _input);
         }
-        input(std::string prompt, char end) {
-            print(prompt, sysIO::endl(end));
-            std::getline(std::cin, _input);
-        }
-        input(std::string prompt, sysIO::endl end) {
+        input(const std::string &prompt, const sysIO::endl &end) {
             print(prompt, end);
             std::getline(std::cin, _input);
         }
         template <typename... Args>
-        input(std::string prompt, Args &&...format) {
+        explicit input(std::string prompt, Args &&...format) {
             print(prompt, sysIO::endl(' '), std::forward<Args>(format)...);
             std::getline(std::cin, _input);
         }
@@ -402,19 +418,18 @@ namespace std_v2 {
             return T(_input);
         }
         template <typename T>
-        operator T() {
+        explicit operator T() {
             return T(_input);
         }
-        friend std::ostream &operator<<(std::ostream &os, const input &in) {
-            os << in._input;
-            return os;
+        friend std::ostream &operator<<(std::ostream &oss, const input &inn) {
+            oss << inn._input;
+            return oss;
         }
-        friend std::istream &operator>>(std::istream &is, input &in) {
-            is >> in._input;
-            return is;
+        friend std::istream &operator>>(std::istream &iss, input &inn) {
+            iss >> inn._input;
+            return iss;
         }
 
-      private:
         input(const input &) = delete;
         input(input &&) = delete;
         input &operator=(const input &) = delete;
@@ -424,7 +439,6 @@ namespace std_v2 {
         template <typename T>
         T operator=(T &&) = delete;
     };
-
 }  // namespace std_v2
 
 #endif  // CUSTOM_STL_H

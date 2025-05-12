@@ -1,0 +1,10 @@
+args = ["-l", "pthread"]
+author = "Dhruvan Karitk"
+compiler = "msvc"
+entry_point = "main.cc"
+flags = ["-Wall", "-Wextra", "-Werror"]
+include = ["../include", "/usr/include"]
+lib = ["../lib", "/usr/lib"]
+mode = "debug"
+std = "c++17"
+version = "0.1.0"

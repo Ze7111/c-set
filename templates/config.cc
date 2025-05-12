@@ -2,9 +2,10 @@
 
 #include <fstream>
 #include <iostream>
-#include <sstream>
+#include <string>
 
-#include "../lib/default.hh"
+#include "../libs/tomlplusplus/toml.hpp"
+#include "../pkgs/base/include.hh"
 
 Config::Config(std::string &file)
     : filePath(file)
@@ -20,30 +21,13 @@ auto Config::load() -> void {
         close();
     }
 
-    std::ifstream file(filePath);
-    if (!file.is_open()) {
-        log("failed to open file: " + filePath, LogLevel::ERROR);
-        return;
+    auto config = toml::parse_file(filePath);
+
+    for (const auto &pair : config) {
+        values[std::string(pair.first)] =
+            std::string(pair.second.as_string()->get());
     }
 
-    std::string line;
-    while (std::getline(file, line)) {
-        std::istringstream iss(line);
-        std::string key;
-        std::string value;
-        if (iss.peek() == '#') {
-            continue;
-        }
-        if (std::getline(iss, key, '=')) {
-            if (std::getline(iss, value)) {
-                values[key] = value;
-            }
-        } else {
-            log(line, "line parsing failed", LogLevel::ERROR);
-        }
-    }
-
-    file.close();
     open = true;
     valid = true;
 }
@@ -58,12 +42,6 @@ auto Config::save() -> void {
         log("failed to open file: " + filePath, LogLevel::ERROR);
         return;
     }
-
-    for (auto &pair : values) {
-        file << pair.first << "=" << pair.second << '\n';
-    }
-
-    file.close();
 }
 
 auto Config::close() -> void {
@@ -78,6 +56,8 @@ auto Config::close() -> void {
 auto Config::operator[](const std::string &key) -> std::string & {
     return values[key];
 }
+
+auto Config::operator[](std::string key) -> std::string { return values[key]; }
 
 auto Config::get(const std::string &key) -> std::string { return values[key]; }
 
@@ -146,7 +126,7 @@ auto Config::contains(const std::string &key) const -> bool {
 auto Config::validate() const -> bool { return valid; }
 
 int main() {  // testing
-    std::string file = "string.template";
+    std::string file = ".c-set";
     Config config(file);
 
     std::cout << "Config file: " << file << '\n';

@@ -36,6 +36,11 @@ Copy code
 - `--verbose`:    Enables detailed output of the operation process.
 - `--force`:      Forces the action, allowing overwrites in the target directory.
 - `--version`:    Displays the current version of C-Set.
+- `--use`:        Makes all the files in the specified directory available as
+    a profile. Automatically creates the setup files, that you can modify later.
+    Once finished, you can use the `--use` again to update the profile.
+    And later use it with the `c-set [profile-name]` command. (profile-name is
+    the name of the directory)
 
 Installation and Building
 ------------
@@ -44,7 +49,7 @@ Installation and Building
 git clone https://github.com/ze7111/c-set.git
 ```
     
-2.  Navigate to the C-Set directory:
+1.  Navigate to the C-Set directory:
 ```bash
 cd c-set
 ```

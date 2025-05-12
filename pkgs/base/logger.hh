@@ -4,7 +4,6 @@
 #include <array>
 #include <iostream>
 #include <string>
-#include <vector>
 
 #include "colors_ansi.hh"
 
@@ -16,25 +15,25 @@ inline auto base_logger(const std::string &msg,
     std::string level_S;
     switch (level) {
     case LogLevel::INFO:
-        level_S = std::string(colors::bold) + std::string(colors::fg16::green) +
+        level_S = std::string(colors::bold) + std::string(colors::bg16::green) +
                   "[INFO]" + std::string(colors::reset);
         break;
     case LogLevel::WARN:
         level_S = std::string(colors::bold) +
-                  std::string(colors::fg16::yellow) + "[WARN]" +
+                  std::string(colors::bg16::yellow) + "[WARN]" +
                   std::string(colors::reset);
         break;
     case LogLevel::ERROR:
-        level_S = std::string(colors::bold) + std::string(colors::fg16::red) +
+        level_S = std::string(colors::bold) + std::string(colors::bg16::red) +
                   "[ERROR]" + std::string(colors::reset);
         break;
     case LogLevel::DEBUG:
-        level_S = std::string(colors::bold) + std::string(colors::fg16::gray) +
+        level_S = std::string(colors::bold) + std::string(colors::bg16::gray) +
                   "[DEBUG]" + std::string(colors::reset);
         break;
     case LogLevel::VERBOSE:
         level_S = std::string(colors::bold) +
-                  std::string(colors::fg16::magenta) + "[VERBOSE]" +
+                  std::string(colors::bg16::magenta) + "[VERBOSE]" +
                   std::string(colors::reset);
         break;
     }
@@ -44,7 +43,7 @@ inline auto base_logger(const std::string &msg,
     ctime_s(time_S.data(), time_S.size(), &time_now);
     time_S[24] = time_S[25] = '\0';  // remove newline and null char
     
-    return level_S + colors::reset + " ~ " + colors::fg16::green +
+    return level_S + colors::reset + " ~ " + colors::bg16::gray +
            time_S.data() + colors::reset + " ~ " + msg;
 }
 
@@ -80,6 +79,5 @@ auto log(T &obj, const std::string &msg, LogLevel level = LogLevel::INFO) -> voi
         log("to_string() not defined for object! " + msg, LogLevel::ERROR);
     }
 }
-
 
 #endif  // __LOG_H__

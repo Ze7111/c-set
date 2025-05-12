@@ -40,26 +40,26 @@
 
 #include <cstdint>
 
-using i8 = int8_t;
+using i8  = int8_t;
 using i16 = int16_t;
 using i32 = int32_t;
 using i64 = int64_t;
-using u8 = uint8_t;
+using u8  = uint8_t;
 using u16 = uint16_t;
 using u32 = uint32_t;
 using u64 = uint64_t;
 
-using i8_fast = int_fast8_t;
-using i16_fast = int_fast16_t;
-using i32_fast = int_fast32_t;
-using i64_fast = int_fast64_t;
-using u8_fast = uint_fast8_t;
-typedef uint_fast16_t  u16_fast;
-typedef uint_fast32_t  u32_fast;
-typedef uint_fast64_t  u64_fast;
+using i8_fast   = int_fast8_t;
+using i16_fast  = int_fast16_t;
+using i32_fast  = int_fast32_t;
+using i64_fast  = int_fast64_t;
+using u8_fast   = uint_fast8_t;
+using u16_fast  = uint_fast16_t;
+using u32_fast  = uint_fast32_t;
+using u64_fast  = uint_fast64_t;
 
-typedef intmax_t       isize_max;
-typedef uintmax_t      usize_max;
+using isize_max = intmax_t;
+using usize_max = uintmax_t;
 
 #ifdef _WIN32
     #include <vcruntime.h>
@@ -70,7 +70,6 @@ typedef uintmax_t      usize_max;
 #pragma warning(push)
 #pragma warning(disable: _VCRUNTIME_DISABLED_WARNINGS)
 
-// These macros must exactly match those in the Windows SDK's intsafe.h.
 #define I8_MIN  (-127i8 - 1)
 #define I16_MIN (-32767i16 - 1)
 #define I32_MIN (-2147483647i32 - 1)
