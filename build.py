@@ -249,10 +249,10 @@ logging.basicConfig(
 def run_command_with_dev(command: list[str]) -> None:
     command = ["cmd", "/k", f'"{DEV_PROMPT}"' "&"] + command
     LOG.warning(
-        f"running with os.system, use the Developer Command Prompt to suppress the output"
+        f"can not run '{command[0]}' without the Developer Command Prompt"
     )
-
-    os.system(" ".join(command))
+    live_render.stop()
+    #os.system(" ".join(command))
 
 
 def run_command_without_dev(command: list[str]) -> tuple[bytes, bytes]:
@@ -263,8 +263,8 @@ def run_command_without_dev(command: list[str]) -> tuple[bytes, bytes]:
 def is_valid() -> bool:
     if COMPILER == "cl.exe":
         if os.environ.get("VSINSTALLDIR") is None:
-            LOG.warning("you are not in the Developer Command Prompt")
-            LOG.debug("if nothing happens, run build.py again")
+            LOG.warning("you are not in the Dev Prompt")
+            LOG.debug("start vscode from the Developer Command Prompt")
             return False
     return True
 
@@ -318,6 +318,7 @@ def get_files(path: str) -> None:
             and not f.endswith(".cpp")
             and not f.endswith(".cxx")
             and not f.endswith(".c")
+            and not f.endswith(".i")
         )
     ]
 
@@ -339,17 +340,17 @@ compiled_files: list[str] = []
 
 def handle_build_check(file: str, pipe: bytes, return_code: bytes) -> bool:
     if (
-        return_code is None
-        or return_code != b""
-        and not return_code.endswith(b"\r\n\r\n")
+        (return_code is None or pipe is None)
+        or (return_code != b""
+        and not return_code.endswith(b"\r\n\r\n"))
     ):
         live_render.stop()
 
         if file in files:
             files[files.index(file)] = None
-        else:
-            LOG.critical(f"this is weird, but uh, '{file}' is not in the files list")
-            LOG.critical(f"files list: {files}")
+        #else:
+        #    LOG.critical(f"this is weird, but uh, '{file}' is not in the files list")
+        #    LOG.critical(f"files list: {files}")
 
         return False
     return True
@@ -423,7 +424,7 @@ def create_dirs():
 def check_compiler() -> bool:
     if COMPILER in COMPILE_COMMANDS:
         return True
-
+ 
     LOG.error(f"'{COMPILER}' is not defined in the compiler commands")
 
     compilers: list[str] = list(COMPILE_COMMANDS.keys())
@@ -594,7 +595,11 @@ def init():
             sys.exit(1)
 
         build_times = fork_compiler(workers)
-        link_time = link()
+        if compiled_files:
+            link_time = link()
+        else:
+            LOG.critical("no files were compiled, exiting")
+            sys.exit(1)
 
     if CLEAR: os.system("cls" if sys.platform == "win32" else "clear")
     CONSOLE.print(
