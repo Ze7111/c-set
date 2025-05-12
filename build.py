@@ -1,8 +1,9 @@
 import os
 import sys
-import threading
 import time
 import pathlib
+import platform
+import threading
 import subprocess
 import concurrent.futures
 from typing import Any
@@ -43,38 +44,38 @@ INCLUDES:  list[str] = [
     #r"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.8\include\um",
 ]
 
-TARGET = "x86_64-pc-windows"
+TARGET = ("x86_64-pc-windows" if os.name == "nt" else "x86_64-pc-darwin" if os.name == "darwin" else "x86_64-pc-linux")
 DEV_PROMPT = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\Tools\\VsDevCmd.bat"
 VERBOSE:   bool    = False
-COMPILER:  str     = sys.argv[1] if len(sys.argv) > 1 else "msvc"
+COMPILER:  str     = sys.argv[1] if len(sys.argv) > 1 else ("msvc" if os.name == "nt" else "clang")
 PATH_SEP:  str     = '/'
 DIRECTIVE: str     = "release" if len(sys.argv) > 2 and sys.argv[2] == "-r" else "debug"
 CONSOLE:   Console = Console()
-MAIN_FILE: str     = "main.cc"
-STANDARD:  str     = "c++2b"
+MAIN_FILE: str     = os.path.join(os.getcwd(), "main.cc")
+STANDARD:  str     = "c++latest" if COMPILER == "msvc" else "c++2b"
 COMPILE_COMMANDS = {
     "msvc": {
         "release": [
             "cl.exe",
-            "/std:c++latest",
+            f"/std:{STANDARD}",
             "/O2",  # Enable optimizations
             "/GL",  # Whole program optimization
             "/EHsc",
             f"/Fo:{os.getcwd()}{PATH_SEP}build{PATH_SEP}release{PATH_SEP}generated{PATH_SEP}{{file_name_no_ext}}.obj",
             f"/Fd:{os.getcwd()}{PATH_SEP}build{PATH_SEP}release{PATH_SEP}{{file_name_no_ext}}.pdb",
-            " ".join([f"/I{include}" for include in INCLUDES]) + " " if INCLUDES else "",
+            *[f"/I{include}" for include in INCLUDES],
             "/c",
             "{source_file}"
         ],
         "debug": [
             "cl.exe",
-            "/std:c++latest",
+            f"/std:{STANDARD}",
             "/Od",
             "/Zi",
             "/EHsc",
             f"/Fo:{os.getcwd()}{PATH_SEP}build{PATH_SEP}debug{PATH_SEP}generated{PATH_SEP}{{file_name_no_ext}}.obj",
             f"/Fd:{os.getcwd()}{PATH_SEP}build{PATH_SEP}debug{PATH_SEP}{{file_name_no_ext}}.pdb",
-            " ".join([f"/I{include}" for include in INCLUDES]) + " " if INCLUDES else "",
+            *[f"/I{include}" for include in INCLUDES],
             "/c",
             "{source_file}"
         ]
@@ -82,23 +83,23 @@ COMPILE_COMMANDS = {
     "clang": {
         "release": [
             "clang++",
-            "-std=c++latest",
+            f"-std={STANDARD}",
             "-O3",  # Enable optimizations
             "-flto",  # Link time optimization
             "-fexceptions",
-            f"-o {os.getcwd()}{PATH_SEP}build{PATH_SEP}release{PATH_SEP}generated{PATH_SEP}{{file_name_no_ext}}.o",
-            " ".join([f"-I{include}" for include in INCLUDES]) + " " if INCLUDES else "",
+            f"-o", f"{os.getcwd()}{PATH_SEP}build{PATH_SEP}{DIRECTIVE}{PATH_SEP}generated{PATH_SEP}{{file_name_no_ext}}.obj",
+            *[f"-I{include}" for include in INCLUDES],
             "-c",
             "{source_file}"
         ],
         "debug": [
             "clang++",
-            "-std=c++latest",
+            f"-std={STANDARD}",
             "-O0",  # No optimizations
             "-g",  # Generate debug information
             "-fexceptions",
-            f"-o {os.getcwd()}{PATH_SEP}build{PATH_SEP}debug{PATH_SEP}generated{PATH_SEP}{{file_name_no_ext}}.o",
-            " ".join([f"-I{include}" for include in INCLUDES]) + " " if INCLUDES else "",
+            f"-o", f"{os.getcwd()}{PATH_SEP}build{PATH_SEP}{DIRECTIVE}{PATH_SEP}generated{PATH_SEP}{{file_name_no_ext}}.obj",
+            *[f"-I{include}" for include in INCLUDES],
             "-c",
             "{source_file}"
         ]
@@ -106,23 +107,23 @@ COMPILE_COMMANDS = {
     "gcc": {
         "release": [
             "g++",
-            "-std=c++latest",
+            f"-std={STANDARD}",
             "-O3",  # Enable optimizations
             "-flto",  # Link time optimization
             "-fexceptions",
-            f"-o {os.getcwd()}{PATH_SEP}build{PATH_SEP}release{PATH_SEP}generated{PATH_SEP}{{file_name_no_ext}}.o",
-            " ".join([f"-I{include}" for include in INCLUDES]) + " " if INCLUDES else "",
+            f"-o", f"{os.getcwd()}{PATH_SEP}build{PATH_SEP}{DIRECTIVE}{PATH_SEP}generated{PATH_SEP}{{file_name_no_ext}}.obj",
+            *[f"-I{include}" for include in INCLUDES],
             "-c",
             "{source_file}"
         ],
         "debug": [
             "g++",
-            "-std=c++latest",
+            f"-std={STANDARD}",
             "-O0",  # No optimizations
             "-g",  # Generate debug information
             "-fexceptions",
-            f"-o {os.getcwd()}{PATH_SEP}build{PATH_SEP}debug{PATH_SEP}generated{PATH_SEP}{{file_name_no_ext}}.o",
-            " ".join([f"-I{include}" for include in INCLUDES]) + " " if INCLUDES else "",
+            f"-o", f"{os.getcwd()}{PATH_SEP}build{PATH_SEP}{DIRECTIVE}{PATH_SEP}generated{PATH_SEP}{{file_name_no_ext}}.obj",
+            *[f"-I{include}" for include in INCLUDES],
             "-c",
             "{source_file}"
         ]
@@ -180,6 +181,41 @@ LINK_COMMANDS = {
 files: list[str] = [MAIN_FILE]
 changed_files: list[str] = []
 
+def get_default_compiler():
+    if platform.system() == "Windows":
+        return "cl"  # Default to MSVC on Windows
+    elif platform.system() == "Darwin":
+        return "clang++"  # Default to Clang on macOS
+    else:
+        return "g++"  # Default to GCC on Linux
+
+def get_compiler_target_triple(compiler_command=None):
+    if not compiler_command:
+        compiler_command = get_default_compiler()
+
+    if compiler_command == "cl":
+        command = [compiler_command, '/?']
+    else:
+        command = [compiler_command, '-dumpmachine']
+
+    try:
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            text=True
+        )
+        if compiler_command == "cl":
+            return "MSVC does not directly support -dumpmachine, use other methods to determine architecture."
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        print(f"Error getting target triple: {e}")
+        return None
+    except FileNotFoundError:
+        print("Compiler not found. Please ensure the compiler path is correctly set.")
+        return None
+
 def get_files(path: str) -> None:
     global files; [
         (    get_files     (os.path.join(path, f))
@@ -223,13 +259,6 @@ def build(file: str) -> None:
     command, source_stem = cleanup_build_cmd(file)
     compiled_path = f"{os.getcwd().replace(os.sep, PATH_SEP)}{PATH_SEP}build{PATH_SEP}{DIRECTIVE}{PATH_SEP}generated{PATH_SEP}{source_stem}.obj"
 
-    if not os.environ.get("PATH").split(os.pathsep)[0] + PATH_SEP + command[0]:
-        CONSOLE.print(f"failed to find {command[0]} in PATH")
-        if COMPILER == "msvc":
-            CONSOLE.print("make sure you are in the [red]Developer Command Prompt[/red]")
-            CONSOLE.print("if using vscode run code from the Dev Prompt")
-        return
-    
     try:
         pipe, return_code = subprocess.Popen(
             command,
@@ -237,6 +266,7 @@ def build(file: str) -> None:
             stderr=subprocess.PIPE
         ).communicate()
     except FileNotFoundError:
+        live_render.stop()
         if COMPILER == "msvc":
             CONSOLE.print("make sure you are in the [red]Developer Command Prompt[/red]")
             CONSOLE.print("if using vscode run code from the Dev Prompt")
@@ -247,12 +277,14 @@ def build(file: str) -> None:
     files[files.index(file)] = compiled_path
 
     if return_code != b'' and not return_code.endswith(b"\r\n\r\n"):
-        CONSOLE.print(f"failed to build {file}.")
-        CONSOLE.print(f"'{COMPILE_COMMANDS[COMPILER][DIRECTIVE][0]}' failed with: ", end="")
-        CONSOLE.print(pipe.decode("utf-8"))
-        files[files.index(file)] = None
-        return
-    
+        live_render.stop()
+        CONSOLE.print(f"failed to build {file}.\nexit code: {return_code}")
+        CONSOLE.print(f"'{COMPILE_COMMANDS[COMPILER][DIRECTIVE][0]}' tried to run with the following command:" + "\n" + " ".join(command) + "\n" + " ".join(pipe.decode("utf-8").split("\n")))
+        if file in files:
+            files[files.index(file)] = None
+        else: CONSOLE.print(files)
+        sys.exit(1)
+
     compiled_files.append(file)
 
 def link() -> float | None:
@@ -260,7 +292,7 @@ def link() -> float | None:
 
     liker_table = Table(highlight=True)
     liker_table.add_column("linking -> files")
-    
+
     for file in files:
         liker_table.add_row(file)
 
@@ -271,7 +303,7 @@ def link() -> float | None:
         for cmd in LINK_COMMANDS[COMPILER][DIRECTIVE]
         if cmd
     ] + files
-    
+
     if VERBOSE: CONSOLE.print(f"linking all files in '{DIRECTIVE}' mode with '{COMPILER}'.")
     if VERBOSE: CONSOLE.print(command)
 
@@ -296,7 +328,7 @@ def link() -> float | None:
             os.system(f"cmd /k \"{DEV_PROMPT}\" & {sys.executable} {' '.join(sys.argv)}")
         sys.exit(1)
 
-    
+
     if return_code != b'' and not return_code.endswith(b"\r\n\r\n"):
         CONSOLE.print(f"failed to link all files")
         CONSOLE.print(f"'{LINK_COMMANDS[COMPILER][DIRECTIVE][0]}' failed with: ", end="")
@@ -315,7 +347,7 @@ def display_compiler_files():
 
     for file in files:
         table.add_row(file)
-    
+
     CONSOLE.print(table)
 
 def create_dirs():
@@ -343,9 +375,9 @@ def create_dirs():
 def check_compiler():
     if COMPILER not in COMPILE_COMMANDS:
         CONSOLE.print(f"failed to find compiler '{COMPILER}'")
-        
+
         compilers: list[str] = list(COMPILE_COMMANDS.keys())
-        
+
         table: Table = Table(highlight=True)
         table.add_column("compilers")
         for compiler in compilers: table.add_row(compiler)
@@ -356,11 +388,11 @@ def check_compiler():
 shutdowned: bool = False
 def show_live_render():
     global live_render
-    
+
     with live_render as render:
         while shutdowned is False: render.update(generate_table())
-            
-    
+
+
 def generate_table() -> Table:
     table: Table = Table(highlight=True)
     table.add_column("compiled")
@@ -377,10 +409,14 @@ def fork_compiler(workers: concurrent.futures.ThreadPoolExecutor):
     render = threading.Thread(target=show_live_render)
     render.start()
 
-    build_times: list[float, float] = [time.time(), -1]
-    
-    workers.map(build, files)
-    workers.shutdown(wait=True)
+    build_times: list[float] = [time.time(), -1]
+
+    if sys.platform == "win32":
+        workers.map(build, files)
+        workers.shutdown(wait=True)
+    else:
+        for file in files:
+            build(file)
 
     build_times[1] = time.time()
 
@@ -401,7 +437,7 @@ def check_files():
         CONSOLE.print("this is not recommended, add more files to compile")
         CONSOLE.print("to add more files, add them to the src folder")
         CONSOLE.print("or run the build tool from the src folder")
-        
+
         CONSOLE.print("or use the -r flag to build in release mode")
         CONSOLE.print("or use the -v flag to enable verbose mode")
         CONSOLE.print("or use the -c flag to change the compiler")
@@ -426,25 +462,25 @@ def identify_changed_files():
     import json
     global changed_files
     state_file = 'build/.changes'
-    
+
     # Initialize the repo
     repo = git.Repo(search_parent_directories=True)
-    
+
     # Get all tracked files including staged and unstaged changes
     current_files = {item.a_path for item in repo.index.diff(None)}
     current_files.update({item.a_path for item in repo.index.diff('HEAD')})
     current_files.update(repo.untracked_files)
-    
+
     # Get the hash of current file contents
     current_files_state = {file: file_hash(os.path.join(repo.working_dir, file)) for file in current_files if os.path.exists(os.path.join(repo.working_dir, file))}
-    
+
     # Load previous state
     if os.path.exists(state_file):
         with open(state_file, 'r') as file:
             previous_files_state = json.load(file)
     else:
         previous_files_state = {}
-    
+
     # Compare hashes to determine changes
     changes = {}
     for file, hash in current_files_state.items():
@@ -453,20 +489,20 @@ def identify_changed_files():
     for file in previous_files_state:
         if file not in current_files_state:
             changes[file] = 'removed'
-    
+
     # Save current state for next run
     with open(state_file, 'w') as file:
         json.dump(current_files_state, file, indent=4)
-    
+
     # Update global variable
     changed_files = list(changes.keys())
     CONSOLE.print(f"found {len(changed_files)} changed files")
-    
+
     return len(changes) > 0
 
 def init():
     init_time[1] = time.time()
-    
+
     workers: concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(max_workers=(
                 len(files) + 1
             if    len(files) + 1 < (os.cpu_count() * 2)
@@ -475,6 +511,7 @@ def init():
     )
 
     get_files(os.getcwd() + PATH_SEP + "src")
+    create_dirs()
 
     if not identify_changed_files() and os.path.exists(f"build{PATH_SEP}{DIRECTIVE}{PATH_SEP}bin{PATH_SEP}main{'.exe' if COMPILER == 'msvc' else ''}"):
         CONSOLE.print("no files have changed, skipping build")
@@ -482,11 +519,10 @@ def init():
         link_time = 0
     else:
         check_files()
-        create_dirs()
         check_compiler()
         build_times = fork_compiler(workers)
         link_time = link()
-        
+
     #os.system("cls" if sys.platform == "win32" else "clear")
     CONSOLE.print(Panel(f"built all files in {build_times:.3f}s\nlinked all files in {link_time:.3f}s", title="build time", highlight=True))
 
@@ -494,7 +530,7 @@ def init():
 
     run_time: list[float, float] = [time.time(), -1]
     if os.path.exists(compiled_path):
-        os.system(("./" + compiled_path) if sys.platform != "win32" else compiled_path)
+        os.system(compiled_path)
     else:
         CONSOLE.print(f"failed to find {compiled_path}")
     run_time[1] = time.time()
